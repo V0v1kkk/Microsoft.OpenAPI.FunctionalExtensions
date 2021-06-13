@@ -1,0 +1,22 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Microsoft.OpenAPI.FunctionalExtensions", "Microsoft.OpenAPI.FunctionalExtensions\Microsoft.OpenAPI.FunctionalExtensions.fsproj", "{B6D88039-81BD-4EC6-B88B-F5007A93FED1}"
+EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Microsoft.OpenAPI.FunctionalExtensions.Visualizing", "Microsoft.OpenAPI.FunctionalExtensions.Visualizing\Microsoft.OpenAPI.FunctionalExtensions.Visualizing.fsproj", "{EA2F5086-1148-4DF7-815B-480E0E72B0E1}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{B6D88039-81BD-4EC6-B88B-F5007A93FED1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B6D88039-81BD-4EC6-B88B-F5007A93FED1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B6D88039-81BD-4EC6-B88B-F5007A93FED1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B6D88039-81BD-4EC6-B88B-F5007A93FED1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EA2F5086-1148-4DF7-815B-480E0E72B0E1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EA2F5086-1148-4DF7-815B-480E0E72B0E1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EA2F5086-1148-4DF7-815B-480E0E72B0E1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EA2F5086-1148-4DF7-815B-480E0E72B0E1}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal

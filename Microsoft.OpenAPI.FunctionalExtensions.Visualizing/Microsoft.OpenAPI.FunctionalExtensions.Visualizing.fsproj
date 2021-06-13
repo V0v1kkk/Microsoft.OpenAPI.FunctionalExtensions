@@ -1,0 +1,21 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net5.0</TargetFramework>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <Compile Include="GraphTools.fs" />
+        <Compile Include="OpenApiLinksVisualization.fs" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Shields.GraphViz" Version="1.0.2" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\Microsoft.OpenAPI.FunctionalExtensions\Microsoft.OpenAPI.FunctionalExtensions.fsproj" />
+    </ItemGroup>
+
+</Project>
