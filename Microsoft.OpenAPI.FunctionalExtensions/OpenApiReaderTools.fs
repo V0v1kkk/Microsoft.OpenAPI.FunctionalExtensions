@@ -5,7 +5,7 @@ open System.IO
 open Results
 open SeqExtensions
 open Microsoft.OpenApi
-open Microsoft.OpenAPI.FunctionalExtensions.Types
+open Microsoft.OpenAPI.FunctionalExtensions.Readers.Types
 
 // Get specification from string
 
@@ -13,20 +13,20 @@ let validateFilePath filePath =
   let isFileExist = File.Exists filePath;
   match isFileExist with
   | true -> filePath |> SpecificationFilePath |> Success
-  | false -> "Specification file doesn't exist." |> AnalyzingError |> Failure
+  | false -> "Specification file doesn't exist." |> FileNotFound |> Failure
 
 
 let readFileText filePath =
-  let readContent = fun (SpecificationFilePath wrappedPath) -> wrappedPath |> System.IO.File.ReadAllText
+  let readContent = fun (SpecificationFilePath path) -> path |> File.ReadAllText
   
-  let readContentExceptionHandler ex = 
-    ("Error on read specification file", ex) |> AnalyzingException
+  let readContentExceptionHandler exn =
+    $"Error on read specification file: %s{exn.ToString()}" |> FileReadError
   
   tryCatch readContent readContentExceptionHandler filePath
 
 let diagnosticsToErrorSting (error:Models.OpenApiError) =
-  sprintf "Error on specification parsing %s. Position: %s" error.Message error.Pointer
-
+  let message = $"Error on specification parsing %s{error.Message}."
+  (message, error.Pointer) |> OpenApiError
 
 let convertToSpecification fileContent =
   let mutable defineSettings = Readers.OpenApiReaderSettings()
@@ -36,13 +36,12 @@ let convertToSpecification fileContent =
   fileContent
   |> reader.Read
   |> function
-    | (_, diagnostic) when diagnostic.Errors.Count > 0 -> 
+    | _, diagnostic when diagnostic.Errors.Count > 0 -> 
       diagnostic.Errors 
       |> Seq.map diagnosticsToErrorSting 
-      |> joinAsLines 
-      |> AnalyzingError 
+      |> OpenApiErrors
       |> Failure
-    | (document, _) -> document |> Success 
+    | document, _ -> document |> Success 
 
 
 let readSpecification (filePath: string) = 
@@ -51,14 +50,3 @@ let readSpecification (filePath: string) =
   |> validateFilePath
   >>= readFileText
   >>= convertToSpecification
-
-
-let getSchemaByName (document:Models.OpenApiDocument) (schemaName:String) =
-  schemaName
-  |> OpenApiTools.getSchemaByName document
-  |> function
-    | Some schema -> schema |> Success
-    | None -> "Schema with specified name didn't found." |> AnalyzingError |> Failure
-  
-  
-

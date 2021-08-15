@@ -1,8 +1,18 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <TargetFramework>net5.0</TargetFramework>
+        <TargetFramework>netstandard2.0</TargetFramework>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    </PropertyGroup>
+
+    <PropertyGroup>
+        <PackageId>Functional.Microsoft.OpenAPI.Extensions</PackageId>
+        <PackageLicenseExpression>MIT</PackageLicenseExpression>
+        <Version>0.0.1-alpha</Version>
+        <Authors>Vladimir Rogozhin</Authors>
+        <Description>
+            Experimental F# adapter for Microsoft.OpenAPI 
+        </Description>
     </PropertyGroup>
 
     <ItemGroup>
@@ -11,11 +21,11 @@
     </ItemGroup>
 
     <ItemGroup>
-      <Compile Include="Types.fs" />
       <Compile Include="StringExtensions.fs" />
       <Compile Include="SeqExtensions.fs" />
       <Compile Include="Results.fs" />
       <Compile Include="OpenApiTools.fs" />
+      <Compile Include="OpenApiReaderTypes.fs" />
       <Compile Include="OpenApiReaderTools.fs" />
     </ItemGroup>
 

@@ -6,6 +6,7 @@ open Shields.GraphViz
 open Shields.GraphViz.Models
 open Results
 open Microsoft.OpenApi
+open OpenApiTools
 
 let inline (!>) (x:^a) : ^b = ((^a or ^b) : (static member op_Implicit : ^a -> ^b) x)
 

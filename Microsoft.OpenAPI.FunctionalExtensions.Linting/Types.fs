@@ -1,6 +1,4 @@
-﻿module Microsoft.OpenAPI.FunctionalExtensions.Types
-
-type SpecificationFilePath = SpecificationFilePath of string
+﻿module Microsoft.OpenAPI.FunctionalExtensions.Linting.Types
 
 type LintingFail =
   | AnalyzingError of string
@@ -20,3 +18,4 @@ type LinterAlarm =
   | BadOperationDescription
   | BadParameterDescription
   | BadSchemaPropertyDescription
+  

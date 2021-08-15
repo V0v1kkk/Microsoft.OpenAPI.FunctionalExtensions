@@ -23,11 +23,6 @@ let rec intersect a b =
     
 let invert x = not x
 
-let toSeqSafe (list: List<'a>) =
-  match list with
-  | null -> Seq.empty
-  | _    -> seq list
-  
 //type Models.OpenApiOperation with
 //  interface System.IComparable with
 //       member x.CompareTo yobj =
@@ -78,7 +73,7 @@ let getExtensionValue (extensions:System.Collections.Generic.IDictionary<string,
   | extensions, extensionName ->
     let isFound, foundValue = extensions.TryGetValue extensionName
     match isFound, foundValue with
-    | isFound, _ when isFound = false -> Option.None
+    | false, _ -> Option.None
     | _, (:? Any.IOpenApiAny as anyValue) -> anyValue |> tryGetValue
     | _, _ -> Option.None  
 
@@ -122,7 +117,7 @@ let getSchemaByName (document:OpenApiDocument) (schemaName) =
   |> Seq.tryFind (fun pair -> pair.Key = schemaName)
   |> function
     | None -> None
-    | Some pair -> pair.Value |> Some
+    | Some pair -> pair.Value |> Some    
   
 let rec traverseSchema<'T> (extract: OpenApiSchema -> 'T) (schema: OpenApiSchema) (propertyName: string) : seq<'T> =
   let currentResult = schema |> extract

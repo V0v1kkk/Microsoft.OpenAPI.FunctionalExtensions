@@ -1,6 +1,7 @@
 ﻿module SeqExtensions
 
 open System
+open System.Collections.Generic
 open System.Text
 open System.Linq
 
@@ -18,8 +19,15 @@ let join (items : seq<string>) (delim : string) =
     // We don't want the last delim in the result buffer, remove
     buff.Remove(buff.Length-delim.Length, delim.Length).ToString()
 
-let toDictionary (f:'s -> 'k) (g:'s -> 'v) (xs:_ seq) = xs.ToDictionary(f, g)
+/// Convert a seq to a dictionary with key and value selectors.
+let toDictionary (f:'s -> 'k) (g:'s -> 'v) (xs:_ seq) =
+    xs.ToDictionary(f, g)
 
+/// Join a seq of lines by Environment.NewLine.
+let joinAsLines lines = join lines Environment.NewLine
 
-
-let joinAsLines lines = join lines Environment.NewLine // partial application
+/// Converts nullable generic list to seq safety. 
+let toSeqSafe (list: List<'a>) =
+  match list with
+  | null -> Seq.empty
+  | _    -> seq list
