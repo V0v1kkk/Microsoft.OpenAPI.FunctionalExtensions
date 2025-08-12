@@ -4,6 +4,7 @@ open System
 open System.Collections
 open System.Collections.Generic
 open Microsoft.OpenApi
+open Microsoft.OpenApi.Any
 open Microsoft.OpenApi.Interfaces
 open Microsoft.OpenApi.Models
 open StringExtensions
@@ -11,8 +12,9 @@ open Results
 open SeqExtensions
 open System.IO
 open StringExtensions
+open System.Collections.Generic
 
-let rec intersect a b =
+let rec private intersect a b =
     match a with
     |h::t -> match b with
              |h2::t2 -> 
@@ -21,7 +23,7 @@ let rec intersect a b =
              |[] -> []
     |[] -> []
     
-let invert x = not x
+let private invert x = not x
 
 //type Models.OpenApiOperation with
 //  interface System.IComparable with
@@ -32,9 +34,9 @@ let invert x = not x
   //member s1.icompare(s2: string) = System.String.Equals(s1, s2, System.StringComparison.CurrentCultureIgnoreCase);
 //type Operation = Operation of Models.OpenApiOperation
 
-let rec tryGetValue (any:Any.IOpenApiAny):Option<string> = 
+let rec tryGetValue (any:IOpenApiAny):Option<string> = 
   
-  let apiObjectToDictionary (object:Any.OpenApiObject) =
+  let apiObjectToDictionary (object:OpenApiObject) =
     [ for kvPair in object -> kvPair.Key, (tryGetValue kvPair.Value) ]
     |> seq
   
@@ -49,24 +51,24 @@ let rec tryGetValue (any:Any.IOpenApiAny):Option<string> =
     |> joinAsLines
 
   match any with
-  | :? Any.OpenApiArray as arrayValue -> arrayValue |> arrayToString |> Some
-  | :? Any.OpenApiBinary as binaryValue -> binaryValue.Value |> toSomeString
-  | :? Any.OpenApiBoolean as booleanValue -> booleanValue.Value |> toSomeString
-  | :? Any.OpenApiByte as byteValue -> byteValue.Value |> toSomeString
-  | :? Any.OpenApiDate as dateValue -> dateValue.Value |> toSomeString
-  | :? Any.OpenApiDateTime as dateValue -> dateValue.Value |> toSomeString
-  | :? Any.OpenApiDouble as doubleValue -> doubleValue.Value |> toSomeString
-  | :? Any.OpenApiFloat as floatValue -> floatValue.Value |> toSomeString
-  | :? Any.OpenApiInteger as integerValue -> integerValue.Value |> toSomeString
-  | :? Any.OpenApiLong as longValue -> longValue.Value |> toSomeString
-  | :? Any.OpenApiNull -> None
-  | :? Any.OpenApiObject as objectValue -> objectValue |> apiObjectToDictionary |> toSomeString  //todo: fix to string
-  | :? Any.OpenApiPassword as passwordValue -> passwordValue.Value |> toSomeString
-  | :? Any.OpenApiString as stringValue -> stringValue.Value |> toSomeString
+  | :? OpenApiArray as arrayValue -> arrayValue |> arrayToString |> Some
+  | :? OpenApiBinary as binaryValue -> binaryValue.Value |> toSomeString
+  | :? OpenApiBoolean as booleanValue -> booleanValue.Value |> toSomeString
+  | :? OpenApiByte as byteValue -> byteValue.Value |> toSomeString
+  | :? OpenApiDate as dateValue -> dateValue.Value |> toSomeString
+  | :? OpenApiDateTime as dateValue -> dateValue.Value |> toSomeString
+  | :? OpenApiDouble as doubleValue -> doubleValue.Value |> toSomeString
+  | :? OpenApiFloat as floatValue -> floatValue.Value |> toSomeString
+  | :? OpenApiInteger as integerValue -> integerValue.Value |> toSomeString
+  | :? OpenApiLong as longValue -> longValue.Value |> toSomeString
+  | :? OpenApiNull -> None
+  | :? OpenApiObject as objectValue -> objectValue |> apiObjectToDictionary |> toSomeString  //todo: fix to string
+  | :? OpenApiPassword as passwordValue -> passwordValue.Value |> toSomeString
+  | :? OpenApiString as stringValue -> stringValue.Value |> toSomeString
   | _ -> None // todo: why incomplete matching? & replace to Failure
   
 
-let getExtensionValue (extensions:System.Collections.Generic.IDictionary<string,IOpenApiExtension>) extensionName = 
+let getExtensionValue (extensions:IDictionary<string,IOpenApiExtension>) extensionName = 
   match extensions, extensionName with
   | _, extensionName when (String.IsNullOrEmpty extensionName) -> Option.None
   | extensions, _ when extensions = null -> Option.None
@@ -74,7 +76,7 @@ let getExtensionValue (extensions:System.Collections.Generic.IDictionary<string,
     let isFound, foundValue = extensions.TryGetValue extensionName
     match isFound, foundValue with
     | false, _ -> Option.None
-    | _, (:? Any.IOpenApiAny as anyValue) -> anyValue |> tryGetValue
+    | _, (:? IOpenApiAny as anyValue) -> anyValue |> tryGetValue
     | _, _ -> Option.None  
 
 let operationHasExtensionWithTrueValue (operation:OpenApiOperation) operationName =
@@ -84,12 +86,12 @@ let operationHasExtensionWithTrueValue (operation:OpenApiOperation) operationNam
     | _ -> false
 
 let isInternalOperation operation =
-  operationHasExtensionWithTrueValue operation "x-vendor-vac-internal"
+  operationHasExtensionWithTrueValue operation "x-vendor-product-internal"
   
 let isNotInternalOperation: OpenApiOperation -> bool = isInternalOperation >> invert
   
 let isImplementedOperation operation =
-  operationHasExtensionWithTrueValue operation "x-vendor-vac-internal"  
+  operationHasExtensionWithTrueValue operation "x-vendor-product-implemented"  
   
 
 let getOperations (document:OpenApiDocument) =

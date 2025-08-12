@@ -4,14 +4,13 @@ open Microsoft.OpenAPI.FunctionalExtensions.Readers.Types
 open Microsoft.OpenApi.Models
 open NUnit.Framework
 open Microsoft.OpenAPI.FunctionalExtensions.OpenApiReaderTools
-open NUnit.Framework
 
 [<SetUp>]
 let Setup () =
     ()
 
 [<Test>]
-let ``Simple petstore specification must read without errors`` () =
+let ``Simple Petstore specification must read without errors`` () =
     let specificationPath = "Specifications/petstore.yaml"
     let readSpecificationResult = readSpecification specificationPath
     
