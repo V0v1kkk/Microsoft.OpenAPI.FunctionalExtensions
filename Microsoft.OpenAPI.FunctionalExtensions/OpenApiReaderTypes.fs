@@ -1,7 +1,7 @@
 ﻿module Microsoft.OpenAPI.FunctionalExtensions.Readers.Types
 
-open Microsoft.OpenApi.Models
-open Results
+open Microsoft.OpenApi
+// Using FSharp.Core Result in consumer modules; keep this file Result-agnostic.
 
 type SpecificationFilePath = SpecificationFilePath of string
 

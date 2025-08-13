@@ -106,7 +106,9 @@ Acceptance:
   - [ ] `schema-graph dot` → DOT from IR
   - [ ] `route-map collect` → JSON IR
   - [ ] `route-map dot` → DOT from IR
+  - [ ] `scissors` → cut a subset of a spec by tags, operations, or path globs (keeps all referenced schemas)
 - [ ] Global options: input file(s), resolve external refs option, filters (tags, paths), output target
+  - [ ] Scissors-specific options: `--include-tags`, `--include-operations`, `--include-paths`, `--include-components`, `--transitive` (default true), `--out`
 - [ ] Exit codes and error messages are consistent and machine-friendly
 
 Acceptance:
@@ -198,6 +200,7 @@ Exit codes:
 
 - **Unit tests**: NUnit-based tests for pure traversal helpers, pointer utilities, IR construction
 - **Integration tests**: load `Samples/` specs and assert IR shape/size; diff/merge behaviors
+- **API Scissors tests**: end-to-end cuts by tag/path/op produce valid specs; ensure all transitive schemas are retained; snapshots compare sizes and components sets
 - **Snapshot tests**: IR JSON and DOT outputs (golden files) via `Verify.NUnit`
 - **Property-based tests**: schema generation (FsCheck with `FsCheck.NUnit`) to stress traversal and cycle handling
 - **CLI tests**: invoke process with arguments; assert exit code and output content

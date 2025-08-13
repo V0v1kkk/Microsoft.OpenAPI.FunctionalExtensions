@@ -10,6 +10,14 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{591E1A4C
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Microsoft.OpenAPI.FunctionalExtensions.Tests", "Tests\Microsoft.OpenAPI.FunctionalExtensions.Tests\Microsoft.OpenAPI.FunctionalExtensions.Tests.fsproj", "{D3ABCC44-2A03-46A8-A25E-5BA67E085C46}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tools", "Tools", "{04843583-27DB-432A-9298-EE16C866BC6B}"
+EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Microsoft.OpenAPI.FunctionalExtensions.Visualizing.Tool", "Microsoft.OpenAPI.FunctionalExtensions.Visualizing.Tool\Microsoft.OpenAPI.FunctionalExtensions.Visualizing.Tool.fsproj", "{0D85D923-F090-4ED8-BB65-1C9BFC087DAE}"
+EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Microsoft.OpenAPI.FunctionalExtensions.Visualizing", "Tests\Microsoft.OpenAPI.FunctionalExtensions.Visualizing\Microsoft.OpenAPI.FunctionalExtensions.Visualizing.fsproj", "{2FC0FC75-3F96-4F0F-B467-BC3A4F9091E0}"
+EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Microsoft.OpenAPI.FunctionalExtensions.Converter.Tool", "Microsoft.OpenAPI.FunctionalExtensions.Converter.Tool\Microsoft.OpenAPI.FunctionalExtensions.Converter.Tool.fsproj", "{8A951375-B57B-4DF8-8B4B-8414AFD5F4B5}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -32,8 +40,23 @@ Global
 		{D3ABCC44-2A03-46A8-A25E-5BA67E085C46}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D3ABCC44-2A03-46A8-A25E-5BA67E085C46}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D3ABCC44-2A03-46A8-A25E-5BA67E085C46}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0D85D923-F090-4ED8-BB65-1C9BFC087DAE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0D85D923-F090-4ED8-BB65-1C9BFC087DAE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0D85D923-F090-4ED8-BB65-1C9BFC087DAE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0D85D923-F090-4ED8-BB65-1C9BFC087DAE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2FC0FC75-3F96-4F0F-B467-BC3A4F9091E0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2FC0FC75-3F96-4F0F-B467-BC3A4F9091E0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2FC0FC75-3F96-4F0F-B467-BC3A4F9091E0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2FC0FC75-3F96-4F0F-B467-BC3A4F9091E0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8A951375-B57B-4DF8-8B4B-8414AFD5F4B5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8A951375-B57B-4DF8-8B4B-8414AFD5F4B5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8A951375-B57B-4DF8-8B4B-8414AFD5F4B5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8A951375-B57B-4DF8-8B4B-8414AFD5F4B5}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{D3ABCC44-2A03-46A8-A25E-5BA67E085C46} = {591E1A4C-EA75-4F3F-BFFC-6BE6F1F5DEF9}
+		{0D85D923-F090-4ED8-BB65-1C9BFC087DAE} = {04843583-27DB-432A-9298-EE16C866BC6B}
+		{2FC0FC75-3F96-4F0F-B467-BC3A4F9091E0} = {591E1A4C-EA75-4F3F-BFFC-6BE6F1F5DEF9}
+		{8A951375-B57B-4DF8-8B4B-8414AFD5F4B5} = {04843583-27DB-432A-9298-EE16C866BC6B}
 	EndGlobalSection
 EndGlobal

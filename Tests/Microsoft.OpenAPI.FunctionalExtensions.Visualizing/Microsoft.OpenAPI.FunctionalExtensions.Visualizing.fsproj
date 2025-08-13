@@ -5,6 +5,8 @@
 
         <IsPackable>false</IsPackable>
         <GenerateProgramFile>false</GenerateProgramFile>
+        <AssemblyName>Microsoft.OpenAPI.FunctionalExtensions.Visualizing.Tests</AssemblyName>
+        <RootNamespace>Microsoft.OpenAPI.FunctionalExtensions.Visualizing.Tests</RootNamespace>
     </PropertyGroup>
 
     <ItemGroup>
@@ -17,21 +19,9 @@
     </ItemGroup>
 
     <ItemGroup>
-        <Compile Include="ReadingTests.fs" />
-        <Compile Include="TraversalTests.fs" />
-        <Compile Include="OperationsTraversalTests.fs" />
-      <Compile Include="OpenApiSchemaAnalysisTests.fs" />
+        <Compile Include="UnitTest1.fs" />
+        <Compile Include="ToolTests.fs" />
         <Compile Include="Program.fs" />
-        <Content Include="Specifications\petstore.yaml">
-          <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-        </Content>
-      <Content Include="Specifications\e-shop-example.yaml">
-        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-      </Content>
-    </ItemGroup>
-
-    <ItemGroup>
-      <ProjectReference Include="..\..\Microsoft.OpenAPI.FunctionalExtensions\Microsoft.OpenAPI.FunctionalExtensions.fsproj" />
     </ItemGroup>
 
 </Project>

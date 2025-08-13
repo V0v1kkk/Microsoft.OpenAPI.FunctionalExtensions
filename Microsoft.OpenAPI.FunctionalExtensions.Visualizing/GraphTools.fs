@@ -4,7 +4,7 @@ open System
 open System.Collections.Generic
 open Shields.GraphViz
 open Shields.GraphViz.Models
-open Results
+// open Results // legacy disabled
 open Microsoft.OpenApi
 open OpenApiTools
 
@@ -84,4 +84,4 @@ let createGraph (baseSchemaName:String) (document:Models.OpenApiDocument) =
   //>>= write
   //schema
 
-  Success 0
+  0

@@ -4,11 +4,10 @@ open System
 open System.Collections
 open System.Collections.Generic
 open Microsoft.OpenApi
-open Microsoft.OpenApi.Any
-open Microsoft.OpenApi.Interfaces
-open Microsoft.OpenApi.Models
+open System.Text.Json.Nodes
+open Microsoft.OpenApi
 open StringExtensions
-open Results
+// open Results // legacy disabled
 open SeqExtensions
 open System.IO
 open StringExtensions
@@ -34,38 +33,26 @@ let private invert x = not x
   //member s1.icompare(s2: string) = System.String.Equals(s1, s2, System.StringComparison.CurrentCultureIgnoreCase);
 //type Operation = Operation of Models.OpenApiOperation
 
-let rec tryGetValue (any:IOpenApiAny):Option<string> = 
-  
-  let apiObjectToDictionary (object:OpenApiObject) =
-    [ for kvPair in object -> kvPair.Key, (tryGetValue kvPair.Value) ]
-    |> seq
-  
-  let toSomeString (x:Object) = if x <> null then x |> (Convert.ToString >> Some) else None //todo: string to lower case
-
-  let arrayToString array = 
-    array
-    |> seq 
-    |> Seq.map (fun x -> tryGetValue x) 
-    |> Seq.where (fun x -> x.IsSome) 
-    |> Seq.map (fun x -> x.Value) 
-    |> joinAsLines
-
-  match any with
-  | :? OpenApiArray as arrayValue -> arrayValue |> arrayToString |> Some
-  | :? OpenApiBinary as binaryValue -> binaryValue.Value |> toSomeString
-  | :? OpenApiBoolean as booleanValue -> booleanValue.Value |> toSomeString
-  | :? OpenApiByte as byteValue -> byteValue.Value |> toSomeString
-  | :? OpenApiDate as dateValue -> dateValue.Value |> toSomeString
-  | :? OpenApiDateTime as dateValue -> dateValue.Value |> toSomeString
-  | :? OpenApiDouble as doubleValue -> doubleValue.Value |> toSomeString
-  | :? OpenApiFloat as floatValue -> floatValue.Value |> toSomeString
-  | :? OpenApiInteger as integerValue -> integerValue.Value |> toSomeString
-  | :? OpenApiLong as longValue -> longValue.Value |> toSomeString
-  | :? OpenApiNull -> None
-  | :? OpenApiObject as objectValue -> objectValue |> apiObjectToDictionary |> toSomeString  //todo: fix to string
-  | :? OpenApiPassword as passwordValue -> passwordValue.Value |> toSomeString
-  | :? OpenApiString as stringValue -> stringValue.Value |> toSomeString
-  | _ -> None // todo: why incomplete matching? & replace to Failure
+// OpenAPI v2 removed OpenApiAny model types; skip extension parsing helpers for now
+let rec tryGetValue (value: obj) : Option<string> =
+  match value with
+  | null -> None
+  | :? JsonNode as node ->
+      match node with
+      | :? JsonValue as v ->
+          match v.TryGetValue<string>() with
+          | true, s -> Some s
+          | _ -> Some (v.ToJsonString())
+      | :? JsonArray as arr ->
+          arr |> Seq.map (fun x -> tryGetValue (x :> obj)) |> Seq.choose id |> Seq.toList |> joinAsLines |> Some
+      | :? JsonObject as objn ->
+          objn |> Seq.map (fun kv -> sprintf "%s=%s" kv.Key (tryGetValue (kv.Value :> obj) |> Option.defaultValue "")) |> joinAsLines |> Some
+      | _ -> Some (node.ToJsonString())
+  | :? string as s -> Some s
+  | :? bool as b -> Some (string b)
+  | :? int as i -> Some (string i)
+  | :? float as f -> Some (string f)
+  | _ -> Some (value.ToString())
   
 
 let getExtensionValue (extensions:IDictionary<string,IOpenApiExtension>) extensionName = 
@@ -76,8 +63,9 @@ let getExtensionValue (extensions:IDictionary<string,IOpenApiExtension>) extensi
     let isFound, foundValue = extensions.TryGetValue extensionName
     match isFound, foundValue with
     | false, _ -> Option.None
-    | _, (:? IOpenApiAny as anyValue) -> anyValue |> tryGetValue
-    | _, _ -> Option.None  
+    | _, (:? JsonNodeExtension as jext) -> jext.Node :> obj |> tryGetValue
+    | _, anyValue -> anyValue :> obj |> tryGetValue
+    
 
 let operationHasExtensionWithTrueValue (operation:OpenApiOperation) operationName =
     let value = getExtensionValue operation.Extensions operationName
@@ -119,7 +107,7 @@ let getSchemaByName (document:OpenApiDocument) (schemaName) =
   |> Seq.tryFind (fun pair -> pair.Key = schemaName)
   |> function
     | None -> None
-    | Some pair -> pair.Value |> Some    
+    | Some pair -> (pair.Value :?> OpenApiSchema) |> Some    
   
 let rec traverseSchema<'T> (extract: OpenApiSchema -> 'T) (schema: OpenApiSchema) (propertyName: string) : seq<'T> =
   let currentResult = schema |> extract
@@ -127,12 +115,12 @@ let rec traverseSchema<'T> (extract: OpenApiSchema -> 'T) (schema: OpenApiSchema
   let innerPropertiesResult =
     match schema.Properties with
     | null -> Seq.empty
-    | properties -> properties |> Seq.collect (fun property -> traverseSchema extract property.Value property.Key)
+    | properties -> properties |> Seq.collect (fun property -> traverseSchema extract (property.Value :?> OpenApiSchema) property.Key)
     
   let allOfResult =
     match schema.AllOf with
     | null -> Seq.empty
-    | allOfSchemas -> allOfSchemas |> Seq.collect (fun schema -> traverseSchema extract schema propertyName)
+    | allOfSchemas -> allOfSchemas |> Seq.collect (fun schema -> traverseSchema extract (schema :?> OpenApiSchema) propertyName)
      
   seq { yield currentResult; yield! innerPropertiesResult; yield! allOfResult }
   

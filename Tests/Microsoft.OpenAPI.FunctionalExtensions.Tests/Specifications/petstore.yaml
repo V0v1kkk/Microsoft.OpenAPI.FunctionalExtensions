@@ -13,6 +13,7 @@ paths:
       operationId: listPets
       tags:
         - pets
+      x-feature-flag: true
       parameters:
         - name: limit
           in: query
@@ -44,6 +45,7 @@ paths:
       operationId: createPets
       tags:
         - pets
+      x-feature-flag: false
       responses:
         '201':
           description: Null response
