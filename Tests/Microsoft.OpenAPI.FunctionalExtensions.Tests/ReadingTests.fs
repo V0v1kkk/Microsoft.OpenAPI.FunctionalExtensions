@@ -15,5 +15,5 @@ let ``Simple Petstore specification must read without errors`` () =
     let readSpecificationResult = readSpecification specificationPath
     
     match readSpecificationResult with
-    | Results.Success document -> Assert.NotZero document.Paths.Count
+    | Results.Success document -> Assert.That(document.Paths.Count, Is.GreaterThan(0))
     | Results.Failure _ -> Assert.Fail()
