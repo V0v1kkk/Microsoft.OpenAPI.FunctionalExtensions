@@ -1,7 +1,7 @@
 # OpenAPI F# Extensions — API Reference
 
 Namespace: `Microsoft.OpenAPI.FunctionalExtensions.*` unless noted.  
-Packages: `Functional.Microsoft.OpenAPI.Extensions` (core), `Microsoft.OpenAPI.FunctionalExtensions.Visualizing` (Graphviz).
+Packages: `Functional.Microsoft.OpenAPI.Extensions` (core), `Functional.Microsoft.OpenAPI.Extensions.Linting` (linting), `Functional.Microsoft.OpenAPI.Extensions.Visualizing` (Graphviz).
 
 ---
 
@@ -24,7 +24,9 @@ Packages: `Functional.Microsoft.OpenAPI.Extensions` (core), `Microsoft.OpenAPI.F
 | `OpenApiAdapters` | `OpenApiSchemaAnalysis` |
 | `OpenApiTraversal` | `OpenApiAdapters`, `OpenApiSchemaAnalysis` |
 | `OpenApiOperationsTraversal` | `ActivePatterns`, `ReferenceAdapters`, `OperationAdapters`, `DocumentAdapters`, `SchemaAdapters` |
+| `OpenApiLinksTraversal` | `DocumentAdapters`, `OperationAdapters`, `AdapterCore` |
 | `OpenApiMerge` | `Microsoft.OpenApi.Reader` |
+| `Linting.*` | Core adapters, `Microsoft.OpenApi` |
 | `OpenApiScissors` | `OpenApiSchemaAnalysis` |
 | `OpenApiWriterTools` | `Microsoft.OpenApi` |
 | `GraphvizExport` | `OpenApiTraversal`, `OpenApiOperationsTraversal`, `Rubjerg.Graphviz` |
@@ -246,6 +248,29 @@ Schema ref fields are JSON pointers (`#/components/schemas/{name}`).
 
 ---
 
+## OpenApiLinksTraversal
+
+Module `OpenApiLinksTraversal` (global module name).
+
+### IR types
+
+| Type | Fields / Cases |
+|------|----------------|
+| `LinkSource` | `ResponseBody of jsonPointer` \| `ResponseHeader of headerName` \| `RequestBody of jsonPointer` |
+| `LinkTarget` | `OperationParameter of parameterName` \| `RequestBodyField of jsonPointer` |
+| `OperationLink` | `LinkName`, `SourceOperationId`, `TargetOperationId`, `Source`, `Target`, `Description` |
+| `LinksGraph` | `Operations: string list`, `Links: OperationLink list` |
+
+### Functions
+
+| Function | Signature | Description |
+|----------|-----------|-------------|
+| `collectLinksGraph` | `OpenApiDocument -> LinksGraph` | Collect operation links from response `links` objects |
+
+Parses runtime expressions (`$response.body#/…`, `$response.header.…`, `$request.body#/…`) into `LinkSource`/`LinkTarget` pairs. Operations without `operationId` are skipped as link sources.
+
+---
+
 ## OpenApiMerge
 
 `Microsoft.OpenAPI.FunctionalExtensions.OpenApiMerge`
@@ -295,6 +320,8 @@ Filter logic: operation kept if **any** of tag, path substring, or operationId m
 | `exportSingleComponentSchemaToSvg` | `OpenApiDocument -> string -> string -> unit` | Single component SVG |
 | `exportRouteMapToSvg` | `OpenApiDocument -> string -> unit` | Hub + route chains (title as hub) |
 | `exportRouteMapToSvgWith` | `OpenApiDocument -> string -> RouteSvgOptions -> unit` | Custom route diagram |
+| `renderLinksGraph` | `LinksGraph -> string -> unit` | Links IR → SVG |
+| `exportLinksGraphToSvg` | `OpenApiDocument -> string -> unit` | Collect links IR and render SVG |
 
 ### RouteSvgOptions
 
@@ -303,6 +330,72 @@ Filter logic: operation kept if **any** of tag, path substring, or operationId m
 | `CenterLabel` | `string option` | `doc.Info.Title` |
 | `IncludeOperations` | `bool` | `false` |
 | `IncludeSchemas` | `bool` | `false` |
+
+---
+
+## Microsoft.OpenAPI.FunctionalExtensions.Linting
+
+Package: `Functional.Microsoft.OpenAPI.Extensions.Linting`
+
+### Types (`Linting.Types`)
+
+| Type | Cases / Fields |
+|------|----------------|
+| `Severity` | `Error` \| `Warning` \| `Info` |
+| `RuleId` | `string` (type alias) |
+| `LintLocation` | `DocumentLevel` \| `PathLevel` \| `OperationLevel` \| `SchemaLevel` \| `SchemaPropertyLevel` \| `ParameterLevel` |
+| `LintViolation` | `Rule`, `Severity`, `Message`, `Location` |
+| `LintResult` | `Violations: LintViolation list`, `DocumentPath: string option` |
+| `LintRule` | `OpenApiDocument -> LintViolation list` |
+| `NamedRule` | `Id: RuleId`, `Rule: LintRule` |
+
+### Rules (`Linting.Rules`)
+
+Built-in documentation and structure rules (`defaultNamedRules`):
+
+| Rule ID | Severity | Function |
+|---------|----------|----------|
+| `missing-operation-id` | Error | `missingOperationId` |
+| `duplicate-operation-id` | Error | `duplicateOperationId` |
+| `path-parameter-not-defined` | Error | `pathParameterNotDefined` |
+| `operation-without-responses` | Error | `operationWithoutResponses` |
+| `duplicate-path-parameter` | Error | `duplicatePathParameter` |
+| `empty-operation-summary` | Warning | `emptyOperationSummary` |
+| `empty-parameter-description` | Warning | `emptyParameterDescription` |
+| `empty-schema-property-description` | Warning | `emptySchemaPropertyDescription` |
+| `unused-schemas` | Warning | `unusedSchemas` |
+| `missing-response-description` | Error | `missingResponseDescription` |
+| `path-without-operations` | Warning | `pathWithoutOperations` |
+| `missing-content-type` | Error | `missingContentType` |
+
+### ExampleValidation (`Linting.ExampleValidation`)
+
+| Rule ID | Severity | Function |
+|---------|----------|----------|
+| `invalid-examples` | Error / Info | `invalidExamples` |
+
+Validates inline and named examples against schemas (type, enum, required properties, formats).
+
+### LinterConfig (`Linting.LinterConfig`)
+
+| Member | Description |
+|--------|-------------|
+| `defaults` | All default rules enabled |
+| `withOnly` | `RuleId list -> LinterConfig -> LinterConfig` — run only listed rules |
+| `without` | `RuleId list -> LinterConfig -> LinterConfig` — exclude rules |
+| `withCustom` | `LintRule list -> LinterConfig -> LinterConfig` — append custom rules |
+| `withSeverity` | `RuleId -> Severity -> LinterConfig -> LinterConfig` — override severity |
+
+`LinterConfig` record fields: `EnabledRules`, `DisabledRules`, `CustomRules`, `Severity`.
+
+### Linter (`Linting.Linter`)
+
+| Function | Signature | Description |
+|----------|-----------|-------------|
+| `defaultNamedRules` | `NamedRule list` | All 12 built-in rules (11 structure + `invalid-examples`) |
+| `lint` | `LintRule list -> OpenApiDocument -> LintResult` | Run explicit rule list |
+| `lintWithConfig` | `LinterConfig -> OpenApiDocument -> LintResult` | Run configured rules |
+| `lintWithDefaults` | `OpenApiDocument -> LintResult` | Run all default rules |
 
 ---
 

@@ -7,6 +7,10 @@ The `Microsoft.OpenAPI.FunctionalExtensions.Linting` library validates OpenAPI d
 | Rule ID | Severity | Description |
 |---------|----------|-------------|
 | `missing-operation-id` | Error | Operations must define a non-empty `operationId`. |
+| `duplicate-operation-id` | Error | The same `operationId` is used by more than one operation. |
+| `path-parameter-not-defined` | Error | A path template `{param}` has no matching path-level or operation-level parameter definition. |
+| `operation-without-responses` | Error | Operations must declare at least one response. |
+| `duplicate-path-parameter` | Error | The same path parameter name is declared more than once on an operation. |
 | `empty-operation-summary` | Warning | Operations should have a non-empty `summary`. |
 | `empty-parameter-description` | Warning | Path and operation parameters should have a description. |
 | `empty-schema-property-description` | Warning | Component schema properties should have a description. |
@@ -93,12 +97,30 @@ The `openapi-fx` tool includes a lint subcommand:
 ```bash
 openapi-fx --lint --input Samples/petstore.yaml
 openapi-fx --lint --input Samples/petstore.yaml --disable-rule empty-parameter-description
+openapi-fx --lint --input Samples/petstore.yaml --format json
 ```
 
-Output format (one line per violation):
+### Human-readable output (default)
+
+One line per violation:
 
 ```
 [SEVERITY] location: message (rule-id)
+```
+
+### JSON output (`--format json`)
+
+A JSON array of violation objects:
+
+```json
+[
+  {
+    "rule": "empty-schema-property-description",
+    "severity": "warning",
+    "message": "Schema property 'id' should have a description.",
+    "location": "schema:Pet.id"
+  }
+]
 ```
 
 Exit codes:

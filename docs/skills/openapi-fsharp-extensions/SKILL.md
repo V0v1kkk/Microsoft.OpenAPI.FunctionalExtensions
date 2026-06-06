@@ -2,18 +2,20 @@
 name: openapi-fsharp-extensions
 description: >
   Guide for consuming the Functional.Microsoft.OpenAPI.Extensions F# library
-  to load, traverse, analyze, merge, subset, and visualize OpenAPI specs on
-  Microsoft.OpenApi v2. Use when working with OpenAPI/Swagger in F#, building
+  to load, traverse, analyze, lint, merge, subset, and visualize OpenAPI specs on
+  Microsoft.OpenApi v3.6+. Use when working with OpenAPI/Swagger in F#, building
   schema graph or route map IR, resolving $ref references, filtering operations
-  by tag, merging specs, cutting subsets with scissors, or exporting Graphviz
-  DOT/SVG diagrams.
+  by tag, merging specs, cutting subsets with scissors, linting specifications,
+  collecting links graphs, or exporting Graphviz DOT/SVG diagrams.
 metadata:
   author: Vladimir Rogozhin
   packages:
     core: Functional.Microsoft.OpenAPI.Extensions
-    visualizing: Microsoft.OpenAPI.FunctionalExtensions.Visualizing
-  targetFramework: net9.0
-  openApiVersion: Microsoft.OpenApi 3.5.2
+    linting: Functional.Microsoft.OpenAPI.Extensions.Linting
+    visualizing: Functional.Microsoft.OpenAPI.Extensions.Visualizing
+    tool: Functional.Microsoft.OpenAPI.Extensions.Tool
+  targetFramework: net10.0
+  openApiVersion: Microsoft.OpenApi 3.6+
 ---
 
 # OpenAPI F# Functional Extensions (Consumer Skill)
@@ -29,8 +31,10 @@ Load this skill when the user wants to **consume** the NuGet/project packages bu
 | Pattern-match schema structure | `ActivePatterns` |
 | Build schema relationship graph (IR) | `OpenApiTraversal` |
 | List routes + schema refs per operation | `OpenApiOperationsTraversal` |
-| Combine multiple spec files | `OpenApiMerge` |
-| Cut spec by tags/paths/operationIds | `OpenApiScissors` |
+| Collect operation links graph (IR) | `OpenApiLinksTraversal` |
+| Lint specification (12 built-in rules) | `Linter.lintWithDefaults` / `lintWithConfig` |
+| Combine multiple spec files | `OpenApiMerge.mergeFiles` |
+| Cut spec by tags/paths/operationIds | `OpenApiScissors.cutDocument` |
 | Export DOT/SVG diagrams | `GraphvizExport` (Visualizing project) |
 
 Do **not** use raw `Microsoft.OpenApi` null checks in consumer code — use adapters and `Result`-based loaders.
@@ -38,16 +42,28 @@ Do **not** use raw `Microsoft.OpenApi` null checks in consumer code — use adap
 ## Installation
 
 ```bash
-dotnet add package Functional.Microsoft.OpenAPI.Extensions
+dotnet add package Functional.Microsoft.OpenAPI.Extensions --version 0.9.0
+```
+
+Linting (optional):
+
+```bash
+dotnet add package Functional.Microsoft.OpenAPI.Extensions.Linting --version 0.9.0
 ```
 
 Visualization (optional):
 
-```xml
-<ProjectReference Include="path/to/Microsoft.OpenAPI.FunctionalExtensions.Visualizing.fsproj" />
+```bash
+dotnet add package Functional.Microsoft.OpenAPI.Extensions.Visualizing --version 0.9.0
 ```
 
-Requires .NET 9 SDK. OpenAPI.NET v2 specifics: HTTP methods are `System.Net.Http.HttpMethod`; nullability is `JsonSchemaType.Null` flag, not a `Nullable` bool.
+CLI tool:
+
+```bash
+dotnet tool install --global Functional.Microsoft.OpenAPI.Extensions.Tool --version 0.9.0
+```
+
+Requires .NET 10 SDK. OpenAPI.NET v3.6+ specifics: HTTP methods are `System.Net.Http.HttpMethod`; nullability is `JsonSchemaType.Null` flag, not a `Nullable` bool.
 
 ---
 
@@ -74,8 +90,13 @@ Need to work with an OpenAPI spec?
 ├─ Build renderer-agnostic IR?
 │   ├─ Schema nodes + edges (allOf/oneOf/anyOf, properties, arrays)?
 │   │   └─ OpenApiTraversal.collectDocumentSchemas / collectSchemaGraph
-│   └─ Routes with schema ref pointers per operation?
-│       └─ OpenApiOperationsTraversal.collectRouteMap
+│   ├─ Routes with schema ref pointers per operation?
+│   │   └─ OpenApiOperationsTraversal.collectRouteMap
+│   └─ Operation links (response links → target operations)?
+│       └─ OpenApiLinksTraversal.collectLinksGraph
+│
+├─ Validate documentation and structure?
+│   └─ Linting.Linter.lintWithDefaults / lintWithConfig (separate NuGet package)
 │
 ├─ Transform the document?
 │   ├─ Merge multiple files?     → OpenApiMerge.mergeFiles
@@ -94,7 +115,8 @@ Need to work with an OpenAPI spec?
 |-------|------|-----------|
 | **Adapters** | Null-safe reads over `IOpenApi*` → `option`, `Map`, `list`, `Set` | — |
 | **Active patterns** | Declarative schema decomposition in `match` | `CompositionKind` (in ActivePatterns) |
-| **IR (traversal)** | Renderer-agnostic graphs | `SchemaGraph`, `RouteMap` |
+| **IR (traversal)** | Renderer-agnostic graphs | `SchemaGraph`, `RouteMap`, `LinksGraph` |
+| **Linting** | Document validation rules | `LintViolation`, `LintResult`, `LinterConfig` |
 | **Transform** | Merge, subset, write | `ScissorsOptions`, `MergeError` |
 | **Visualize** | IR → Graphviz only | `RouteSvgOptions` |
 
@@ -120,11 +142,13 @@ OperationAdapters, DocumentAdapters, ExtensionAdapters
     ↓
 OpenApiAdapters (aggregate)
     ↓
-OpenApiTraversal, OpenApiOperationsTraversal   ← IR (renderer-agnostic)
+OpenApiTraversal, OpenApiOperationsTraversal, OpenApiLinksTraversal   ← IR (renderer-agnostic)
     ↓
 OpenApiMerge, OpenApiScissors, OpenApiWriterTools
     ↓
-GraphvizExport (Visualizing project)           ← rendering only
+Linting (Types, Rules, ExampleValidation, LinterConfig, Linter)     ← separate package
+    ↓
+GraphvizExport (Visualizing project)                                  ← rendering only
 ```
 
 ---
@@ -136,7 +160,7 @@ GraphvizExport (Visualizing project)           ← rendering only
 **Without adapters** (fragile — null collections, exceptions):
 
 ```fsharp
-// BAD: null checks everywhere, OperationType is gone in v2
+// BAD: null checks everywhere
 let tags = op.Tags |> Seq.map (fun t -> t.Name) |> Seq.toList  // NRE if Tags is null
 ```
 
@@ -240,7 +264,7 @@ Use `ResultEx.teeError` for logging at boundaries; keep domain logic in `bind` c
 
 | Mistake | Why it fails | Fix |
 |---------|--------------|-----|
-| `schema.Nullable` bool | Removed in OpenAPI.NET v2 | `SchemaAdapters.schemaIsNullable` or `NullableType` active pattern |
+| `schema.Nullable` bool | Removed in OpenAPI.NET v3.x | `SchemaAdapters.schemaIsNullable` or `NullableType` active pattern |
 | `OperationType` enum | Replaced by `HttpMethod` | `OperationAdapters.pathItemOperations` |
 | Direct `doc.Paths` iteration | `Paths` may be null | `DocumentAdapters.documentPaths` / `allOperations` |
 | Assuming `mergeDocuments` resolves conflicts | First-wins only | Document merge limitations; validate output |
@@ -258,7 +282,7 @@ When writing tests that use this library:
 1. **Load fixtures** via `readSpecification "Specifications/petstore.yaml"` — test projects copy specs to output dir.
 2. **Assert on `Result`** — never assume load succeeds without matching `Ok`/`Error`.
 3. **Adapter tests** — verify null-safe behavior: empty maps/lists, not exceptions.
-4. **IR tests** — `collectDocumentSchemas` / `collectRouteMap` node and edge counts; use **Verify.NUnit** snapshots for stable DOT/JSON IR output.
+4. **IR tests** — `collectDocumentSchemas` / `collectRouteMap` / `collectLinksGraph` node and edge counts; use **Verify.NUnit** snapshots for stable DOT/JSON IR output.
 5. **Property tests** — FsCheck for nullable handling, ref resolution, composition edge cases.
 6. **CLI integration** — `dotnet build` then `dotnet run --no-build` on Visualizing.Tool against `Samples/`.
 
@@ -270,17 +294,20 @@ See [EXAMPLES.md](EXAMPLES.md) for compilable scripts and [REFERENCE.md](REFEREN
 
 ## CLI tool (optional)
 
-Program: `openapi-visualizer` (`Microsoft.OpenAPI.FunctionalExtensions.Visualizing.Tool`)
+Program: `openapi-fx` (`Functional.Microsoft.OpenAPI.Extensions.Tool`)
 
 | Flag | Purpose |
 |------|---------|
 | `--schema-svg` | Schema graph → SVG (add `--dot` for DOT) |
 | `--route-svg` | Route map → SVG |
-| `--schema-collect` / `--route-collect` | IR → JSON |
+| `--links-svg` | Links graph → SVG |
+| `--schema-collect` / `--route-collect` / `--links-collect` | IR → JSON |
+| `--lint` | Lint specification (`--format json` for JSON array output) |
 | `--merge` | Merge specs |
 | `--scissors` | Cut subset (`--include-tag`, `--include-path`, `--include-operation`) |
+| `--version` | Print tool version |
 
-Exit codes: `0` success, `2` input/parse error.
+Exit codes: `0` success (lint: no Error-level violations), `1` lint errors, `2` input/parse error.
 
 ---
 
@@ -292,5 +319,6 @@ Exit codes: `0` success, `2` input/parse error.
 
 ## Additional resources
 
+- **Linting guide**: [LINTING.md](../../LINTING.md)
 - **Compilable examples by use case**: [EXAMPLES.md](EXAMPLES.md)
 - **Module-by-module API tables**: [REFERENCE.md](REFERENCE.md)

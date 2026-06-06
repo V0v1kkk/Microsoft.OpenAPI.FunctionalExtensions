@@ -10,13 +10,19 @@ Each example is a self-contained F# script (`dotnet fsi script.fsx`). Replace `S
 #r "nuget: Microsoft.OpenApi, 3.5.2"
 
 // Or project reference (local development in this repo)
-#r "../../../../Microsoft.OpenAPI.FunctionalExtensions/bin/Debug/net9.0/Functional.Microsoft.OpenAPI.Extensions.dll"
+#r "../../../../Microsoft.OpenAPI.FunctionalExtensions/bin/Debug/net10.0/Functional.Microsoft.OpenAPI.Extensions.dll"
+```
+
+For linting examples, also reference:
+
+```fsharp
+#r "../../../../Microsoft.OpenAPI.FunctionalExtensions.Linting/bin/Debug/net10.0/Functional.Microsoft.OpenAPI.Extensions.Linting.dll"
 ```
 
 For visualization examples, also reference:
 
 ```fsharp
-#r "../../../../Microsoft.OpenAPI.FunctionalExtensions.Visualizing/bin/Debug/net9.0/Microsoft.OpenAPI.FunctionalExtensions.Visualizing.dll"
+#r "../../../../Microsoft.OpenAPI.FunctionalExtensions.Visualizing/bin/Debug/net10.0/Microsoft.OpenAPI.FunctionalExtensions.Visualizing.dll"
 ```
 
 ---
@@ -379,8 +385,8 @@ Requires the Visualizing project/package (Rubjerg.Graphviz).
 ```fsharp
 #!/usr/bin/env dotnet fsi
 
-#r "../../../../Microsoft.OpenAPI.FunctionalExtensions/bin/Debug/net9.0/Functional.Microsoft.OpenAPI.Extensions.dll"
-#r "../../../../Microsoft.OpenAPI.FunctionalExtensions.Visualizing/bin/Debug/net9.0/Microsoft.OpenAPI.FunctionalExtensions.Visualizing.dll"
+#r "../../../../Microsoft.OpenAPI.FunctionalExtensions/bin/Debug/net10.0/Functional.Microsoft.OpenAPI.Extensions.dll"
+#r "../../../../Microsoft.OpenAPI.FunctionalExtensions.Visualizing/bin/Debug/net10.0/Microsoft.OpenAPI.FunctionalExtensions.Visualizing.dll"
 
 open Microsoft.OpenAPI.FunctionalExtensions.OpenApiReaderTools
 open Microsoft.OpenAPI.FunctionalExtensions.Visualizing.GraphvizExport
@@ -398,8 +404,8 @@ match readSpecification "Samples/petstore.yaml" with
 ```fsharp
 #!/usr/bin/env dotnet fsi
 
-#r "../../../../Microsoft.OpenAPI.FunctionalExtensions/bin/Debug/net9.0/Functional.Microsoft.OpenAPI.Extensions.dll"
-#r "../../../../Microsoft.OpenAPI.FunctionalExtensions.Visualizing/bin/Debug/net9.0/Microsoft.OpenAPI.FunctionalExtensions.Visualizing.dll"
+#r "../../../../Microsoft.OpenAPI.FunctionalExtensions/bin/Debug/net10.0/Functional.Microsoft.OpenAPI.Extensions.dll"
+#r "../../../../Microsoft.OpenAPI.FunctionalExtensions.Visualizing/bin/Debug/net10.0/Microsoft.OpenAPI.FunctionalExtensions.Visualizing.dll"
 
 open Microsoft.OpenAPI.FunctionalExtensions.OpenApiReaderTools
 open Microsoft.OpenAPI.FunctionalExtensions.Visualizing.GraphvizExport
@@ -416,8 +422,8 @@ match readSpecification "Samples/petstore.yaml" with
 ```fsharp
 #!/usr/bin/env dotnet fsi
 
-#r "../../../../Microsoft.OpenAPI.FunctionalExtensions/bin/Debug/net9.0/Functional.Microsoft.OpenAPI.Extensions.dll"
-#r "../../../../Microsoft.OpenAPI.FunctionalExtensions.Visualizing/bin/Debug/net9.0/Microsoft.OpenAPI.FunctionalExtensions.Visualizing.dll"
+#r "../../../../Microsoft.OpenAPI.FunctionalExtensions/bin/Debug/net10.0/Functional.Microsoft.OpenAPI.Extensions.dll"
+#r "../../../../Microsoft.OpenAPI.FunctionalExtensions.Visualizing/bin/Debug/net10.0/Microsoft.OpenAPI.FunctionalExtensions.Visualizing.dll"
 
 open Microsoft.OpenAPI.FunctionalExtensions.OpenApiReaderTools
 open Microsoft.OpenAPI.FunctionalExtensions.Visualizing.GraphvizExport
@@ -439,8 +445,8 @@ match readSpecification "Samples/petstore.yaml" with
 ```fsharp
 #!/usr/bin/env dotnet fsi
 
-#r "../../../../Microsoft.OpenAPI.FunctionalExtensions/bin/Debug/net9.0/Functional.Microsoft.OpenAPI.Extensions.dll"
-#r "../../../../Microsoft.OpenAPI.FunctionalExtensions.Visualizing/bin/Debug/net9.0/Microsoft.OpenAPI.FunctionalExtensions.Visualizing.dll"
+#r "../../../../Microsoft.OpenAPI.FunctionalExtensions/bin/Debug/net10.0/Functional.Microsoft.OpenAPI.Extensions.dll"
+#r "../../../../Microsoft.OpenAPI.FunctionalExtensions.Visualizing/bin/Debug/net10.0/Microsoft.OpenAPI.FunctionalExtensions.Visualizing.dll"
 
 open Microsoft.OpenAPI.FunctionalExtensions.OpenApiReaderTools
 open Microsoft.OpenAPI.FunctionalExtensions.Visualizing.GraphvizExport
@@ -454,7 +460,124 @@ match readSpecification "Samples/petstore.yaml" with
 
 ---
 
-## 7. Testing template (NUnit)
+## 7. Linting
+
+Requires the Linting project/package.
+
+### 7.1 Lint with defaults
+
+```fsharp
+#!/usr/bin/env dotnet fsi
+
+#r "nuget: Functional.Microsoft.OpenAPI.Extensions, 0.9.0"
+#r "nuget: Functional.Microsoft.OpenAPI.Extensions.Linting, 0.9.0"
+#r "nuget: Microsoft.OpenApi, 3.6.3"
+
+open Microsoft.OpenAPI.FunctionalExtensions.OpenApiReaderTools
+open Microsoft.OpenAPI.FunctionalExtensions.Linting.Linter
+
+match readSpecification "Samples/petstore.yaml" with
+| Error e -> eprintfn "%A" e
+| Ok doc ->
+    let result = lintWithDefaults doc
+    for violation in result.Violations do
+        printfn "[%A] %s: %s (%s)" violation.Severity violation.Rule violation.Message
+```
+
+### 7.2 Custom rules and disable rules
+
+```fsharp
+#!/usr/bin/env dotnet fsi
+
+#r "nuget: Functional.Microsoft.OpenAPI.Extensions, 0.9.0"
+#r "nuget: Functional.Microsoft.OpenAPI.Extensions.Linting, 0.9.0"
+#r "nuget: Microsoft.OpenApi, 3.6.3"
+
+open System
+open Microsoft.OpenApi
+open Microsoft.OpenAPI.FunctionalExtensions.OpenApiReaderTools
+open Microsoft.OpenAPI.FunctionalExtensions.Linting.Linter
+open Microsoft.OpenAPI.FunctionalExtensions.Linting.LinterConfig
+open Microsoft.OpenAPI.FunctionalExtensions.Linting.Types
+
+let requireApiTitle (document: OpenApiDocument) : LintViolation list =
+    match document.Info with
+    | null -> []
+    | info when String.IsNullOrWhiteSpace info.Title ->
+        [ {
+            Rule = "require-api-title"
+            Severity = Error
+            Message = "API title must be set in info.title."
+            Location = DocumentLevel
+          } ]
+    | _ -> []
+
+let config =
+    LinterConfig.defaults
+    |> LinterConfig.without [ "empty-schema-property-description"; "unused-schemas" ]
+    |> LinterConfig.withCustom [ requireApiTitle ]
+
+match readSpecification "Samples/petstore.yaml" with
+| Error e -> eprintfn "%A" e
+| Ok doc ->
+    let result = lintWithConfig config doc
+    printfn "Violations: %d" result.Violations.Length
+```
+
+### 7.3 Restrict rules with withOnly and withSeverity
+
+```fsharp
+#!/usr/bin/env dotnet fsi
+
+#r "nuget: Functional.Microsoft.OpenAPI.Extensions, 0.9.0"
+#r "nuget: Functional.Microsoft.OpenAPI.Extensions.Linting, 0.9.0"
+#r "nuget: Microsoft.OpenApi, 3.6.3"
+
+open Microsoft.OpenAPI.FunctionalExtensions.OpenApiReaderTools
+open Microsoft.OpenAPI.FunctionalExtensions.Linting.Linter
+open Microsoft.OpenAPI.FunctionalExtensions.Linting.LinterConfig
+open Microsoft.OpenAPI.FunctionalExtensions.Linting.Types
+
+let strictConfig =
+    LinterConfig.defaults
+    |> LinterConfig.withOnly [ "missing-operation-id"; "missing-response-description" ]
+    |> LinterConfig.withSeverity "empty-operation-summary" Info
+
+match readSpecification "Samples/petstore.yaml" with
+| Error e -> eprintfn "%A" e
+| Ok doc ->
+    let result = lintWithConfig strictConfig doc
+    printfn "Strict lint: %d findings" result.Violations.Length
+```
+
+---
+
+## 8. Links graph traversal
+
+### 8.1 Collect links graph
+
+```fsharp
+#!/usr/bin/env dotnet fsi
+
+#r "nuget: Functional.Microsoft.OpenAPI.Extensions, 0.9.0"
+#r "nuget: Microsoft.OpenApi, 3.6.3"
+
+open Microsoft.OpenAPI.FunctionalExtensions.OpenApiReaderTools
+open OpenApiLinksTraversal
+
+match readSpecification "Specifications/links-example.yaml" with
+| Error e -> eprintfn "%A" e
+| Ok doc ->
+    let graph = collectLinksGraph doc
+    printfn "operations=%A" graph.Operations
+    printfn "links=%d" graph.Links.Length
+    for link in graph.Links do
+        printfn "%s --[%s]--> %s" link.SourceOperationId link.LinkName link.TargetOperationId
+```
+
+---
+
+## 9. Testing template (NUnit)
 
 Use this shape in test projects — not runnable as fsx without NUnit references.
 
