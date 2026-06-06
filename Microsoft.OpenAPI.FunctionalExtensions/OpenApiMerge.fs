@@ -5,6 +5,7 @@ open System.IO
 open System.Collections.Generic
 open Microsoft.OpenApi
 open Microsoft.OpenApi.Reader
+open ResultEx
 
 type MergeError =
   | FileNotFound of string
@@ -26,44 +27,54 @@ let private loadDocument (path: string) : Result<OpenApiDocument, MergeError> =
     with ex -> Error (ParseError ex.Message)
 
 let private mergeDictionaries<'K,'V when 'K : equality and 'K : comparison>
+  (sectionName: string)
   (target: IDictionary<'K,'V>)
-  (source: IDictionary<'K,'V>) =
-  if isNull source then () else
-    for kv in source do
-      if target.ContainsKey kv.Key then ()
-      else target[kv.Key] <- kv.Value
+  (source: IDictionary<'K,'V>) : Result<unit, MergeError> =
+  if isNull source then Ok () else
+    source
+    |> Seq.tryFind (fun kv -> target.ContainsKey kv.Key)
+    |> function
+    | Some kv -> Error (MergeConflict $"Duplicate key '{kv.Key}' in components/{sectionName}")
+    | None ->
+        for kv in source do target[kv.Key] <- kv.Value
+        Ok ()
 
-let private mergePathItems (target: OpenApiPaths) (source: OpenApiPaths) =
-  if isNull source then () else
-    for kv in source do
-      if target.ContainsKey kv.Key then
-        // naive: skip conflicts; could deep-merge by methods later
-        ()
-      else target.Add(kv.Key, kv.Value)
+let private mergePathItems (target: OpenApiPaths) (source: OpenApiPaths) : Result<unit, MergeError> =
+  if isNull source then Ok () else
+    source
+    |> Seq.tryFind (fun kv -> target.ContainsKey kv.Key)
+    |> function
+    | Some kv -> Error (MergeConflict $"Duplicate path '{kv.Key}'")
+    | None ->
+        for kv in source do target.Add(kv.Key, kv.Value)
+        Ok ()
 
 let private ensureComponents (doc: OpenApiDocument) =
   if isNull doc.Components then doc.Components <- OpenApiComponents()
 
-let mergeDocuments (docs: OpenApiDocument list) : OpenApiDocument =
-  if docs.IsEmpty then OpenApiDocument() else
-    let baseDoc = docs.Head
-    for d in docs.Tail do
-      // paths
-      if isNull baseDoc.Paths then baseDoc.Paths <- OpenApiPaths()
-      mergePathItems baseDoc.Paths d.Paths
-      // components
+let private mergeIntoBase (baseDoc: OpenApiDocument) (source: OpenApiDocument) : Result<unit, MergeError> =
+  if isNull baseDoc.Paths then baseDoc.Paths <- OpenApiPaths()
+  mergePathItems baseDoc.Paths source.Paths
+  |> bind (fun () ->
       ensureComponents baseDoc
-      ensureComponents d
-      mergeDictionaries baseDoc.Components.Schemas d.Components.Schemas
-      mergeDictionaries baseDoc.Components.Parameters d.Components.Parameters
-      mergeDictionaries baseDoc.Components.Responses d.Components.Responses
-      mergeDictionaries baseDoc.Components.RequestBodies d.Components.RequestBodies
-      mergeDictionaries baseDoc.Components.Headers d.Components.Headers
-      mergeDictionaries baseDoc.Components.Links d.Components.Links
-      mergeDictionaries baseDoc.Components.Callbacks d.Components.Callbacks
-      mergeDictionaries baseDoc.Components.Examples d.Components.Examples
-      mergeDictionaries baseDoc.Components.SecuritySchemes d.Components.SecuritySchemes
-    baseDoc
+      ensureComponents source
+      mergeDictionaries "schemas" baseDoc.Components.Schemas source.Components.Schemas
+      |> bind (fun () -> mergeDictionaries "parameters" baseDoc.Components.Parameters source.Components.Parameters)
+      |> bind (fun () -> mergeDictionaries "responses" baseDoc.Components.Responses source.Components.Responses)
+      |> bind (fun () -> mergeDictionaries "requestBodies" baseDoc.Components.RequestBodies source.Components.RequestBodies)
+      |> bind (fun () -> mergeDictionaries "headers" baseDoc.Components.Headers source.Components.Headers)
+      |> bind (fun () -> mergeDictionaries "links" baseDoc.Components.Links source.Components.Links)
+      |> bind (fun () -> mergeDictionaries "callbacks" baseDoc.Components.Callbacks source.Components.Callbacks)
+      |> bind (fun () -> mergeDictionaries "examples" baseDoc.Components.Examples source.Components.Examples)
+      |> bind (fun () -> mergeDictionaries "securitySchemes" baseDoc.Components.SecuritySchemes source.Components.SecuritySchemes))
+
+let mergeDocuments (docs: OpenApiDocument list) : Result<OpenApiDocument, MergeError> =
+  if docs.IsEmpty then Ok (OpenApiDocument()) else
+    let baseDoc = docs.Head
+    docs.Tail
+    |> List.fold (fun acc doc ->
+        acc |> bind (fun () -> mergeIntoBase baseDoc doc)) (Ok ())
+    |> map (fun () -> baseDoc)
 
 let mergeFiles (paths: string list) : Result<OpenApiDocument, MergeError> =
   let loaded =
@@ -72,6 +83,4 @@ let mergeFiles (paths: string list) : Result<OpenApiDocument, MergeError> =
     |> List.fold (fun acc r -> match acc, r with | Error e, _ -> Error e | _, Error e -> Error e | Ok xs, Ok d -> Ok (d::xs)) (Ok [])
   match loaded with
   | Error e -> Error e
-  | Ok docs -> Ok (mergeDocuments (List.rev docs))
-
-
+  | Ok docs -> mergeDocuments (List.rev docs)

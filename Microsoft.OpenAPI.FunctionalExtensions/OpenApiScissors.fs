@@ -4,7 +4,6 @@ open System
 open System.Collections.Generic
 open System.Net.Http
 open Microsoft.OpenApi
-open OpenApiSchemaAnalysis
 
 type ScissorsOptions = {
   IncludeTags: string list
@@ -32,131 +31,140 @@ let private operationMatches (opts: ScissorsOptions) (path: string) (_methodKey:
     match opts.IncludeOperationIds, op with
     | [], _ -> false
     | _, null -> false
-    | ids, _ when String.IsNullOrWhiteSpace op.OperationId -> false
+    | _, _ when String.IsNullOrWhiteSpace op.OperationId -> false
     | ids, _ -> ids |> List.exists (fun id -> String.Equals(id, op.OperationId, StringComparison.Ordinal))
   let byTag =
     match opts.IncludeTags, op with
     | [], _ -> false
     | _, null -> false
-    | tags, _ when isNull op.Tags -> false
-    | tags, _ -> op.Tags |> Seq.exists (fun t -> not (isNull t) && (tags |> List.exists (fun it -> String.Equals(it, t.Name, StringComparison.OrdinalIgnoreCase))))
+    | tags, _ ->
+        Microsoft.OpenAPI.FunctionalExtensions.OperationAdapters.operationTags op
+        |> List.exists (fun tagName -> tags |> List.exists (fun it -> String.Equals(it, tagName, StringComparison.OrdinalIgnoreCase)))
   match anyFilterSpecified opts with
   | false -> true
   | true -> byPath || byOpId || byTag
 
-let private trySchemaRefName (schema: IOpenApiSchema) : string option = tryGetReferenceId schema
+let private tryParseComponentNameFromRef (referenceString: string) : string option =
+  if String.IsNullOrWhiteSpace referenceString then None
+  else
+    let lastSlash = referenceString.LastIndexOf('/')
+    if lastSlash >= 0 && lastSlash < referenceString.Length - 1 then
+      Some (referenceString.Substring(lastSlash + 1))
+    else
+      Some (referenceString.TrimStart('#', '/'))
 
-let private unionInto (target: HashSet<string>) (items: seq<string>) =
-  for x in items do target.Add x |> ignore
-
-let rec private collectSchemaRefsFromSchema (doc: OpenApiDocument) (visited: HashSet<int>) (acc: HashSet<string>) (schema: IOpenApiSchema) : unit =
+let private tryReferenceId (schema: IOpenApiSchema) : string option =
   match schema with
-  | null -> ()
+  | :? OpenApiSchemaReference as reference ->
+      match reference.Reference with
+      | null -> None
+      | ref ->
+          if not (String.IsNullOrWhiteSpace ref.Id) then tryParseComponentNameFromRef ref.Id
+          else tryParseComponentNameFromRef ref.ReferenceV3
+  | _ -> Microsoft.OpenAPI.FunctionalExtensions.ReferenceAdapters.trySchemaReferenceId schema
+
+let private visitKey (schema: IOpenApiSchema) : string =
+  match tryReferenceId schema with
+  | Some id -> Microsoft.OpenAPI.FunctionalExtensions.ReferenceAdapters.referencePointer id
+  | None -> $"schema:{hash schema}"
+
+let rec private collectSchemaRefsFromSchema
+    (doc: OpenApiDocument)
+    (visited: Set<string>)
+    (acc: HashSet<string>)
+    (schema: IOpenApiSchema)
+    : Set<string> =
+  match schema with
+  | null -> visited
   | s ->
-      let hash = Runtime.CompilerServices.RuntimeHelpers.GetHashCode(s)
-      if visited.Add hash then
-        match trySchemaRefName s with
-        | Some name ->
-            acc.Add name |> ignore
-            match doc.Components with
-            | null -> ()
-            | comp when not (isNull comp.Schemas) ->
-                match comp.Schemas.TryGetValue name with
-                | true, sub -> collectSchemaRefsFromSchema doc visited acc sub
-                | _ -> ()
-            | _ -> ()
-        | None -> ()
-        // descend
-        match s.Properties with
-        | null -> ()
-        | props -> for kv in props do collectSchemaRefsFromSchema doc visited acc kv.Value
-        match s.Items with
-        | null -> ()
-        | it -> collectSchemaRefsFromSchema doc visited acc it
-        match s.AdditionalProperties with
-        | null -> ()
-        | ap -> collectSchemaRefsFromSchema doc visited acc ap
-        let inline each (lst: IList<IOpenApiSchema>) = match lst with | null -> () | xs -> for x in xs do collectSchemaRefsFromSchema doc visited acc x
-        each s.AllOf; each s.OneOf; each s.AnyOf
+      let key = visitKey s
+      if Set.contains key visited then visited
+      else
+        let visited = Set.add key visited
+
+        let visited =
+          match tryReferenceId s with
+          | None -> visited
+          | Some name ->
+              acc.Add name |> ignore
+              match Microsoft.OpenAPI.FunctionalExtensions.DocumentAdapters.tryComponentSchema doc name with
+              | None -> visited
+              | Some sub -> collectSchemaRefsFromSchema doc visited acc sub
+
+        match tryReferenceId s with
+        | Some _ -> visited
+        | None ->
+            let walkChild (child: IOpenApiSchema) =
+              collectSchemaRefsFromSchema doc visited acc child |> ignore
+
+            Microsoft.OpenAPI.FunctionalExtensions.SchemaAdapters.schemaProperties s
+            |> Map.iter (fun _ value -> walkChild value)
+
+            Microsoft.OpenAPI.FunctionalExtensions.SchemaAdapters.schemaItems s
+            |> Option.iter walkChild
+
+            Microsoft.OpenAPI.FunctionalExtensions.SchemaAdapters.schemaAdditionalProperties s
+            |> Option.iter walkChild
+
+            Microsoft.OpenAPI.FunctionalExtensions.SchemaAdapters.schemaAllOf s
+            |> List.iter walkChild
+
+            Microsoft.OpenAPI.FunctionalExtensions.SchemaAdapters.schemaOneOf s
+            |> List.iter walkChild
+
+            Microsoft.OpenAPI.FunctionalExtensions.SchemaAdapters.schemaAnyOf s
+            |> List.iter walkChild
+            visited
 
 let private collectSchemasFromContent (doc: OpenApiDocument) (acc: HashSet<string>) (content: IDictionary<string, IOpenApiMediaType>) =
-  match content with
-  | null -> ()
-  | c ->
-      for mt in c.Values do
-        match mt with
-        | null -> ()
-        | m when isNull m.Schema -> ()
-        | m -> collectSchemaRefsFromSchema doc (HashSet()) acc m.Schema
+  for schema in Microsoft.OpenAPI.FunctionalExtensions.OperationAdapters.schemasFromContent content do
+    collectSchemaRefsFromSchema doc Set.empty acc schema |> ignore
 
 let private collectSchemaRefsFromOperation (doc: OpenApiDocument) (acc: HashSet<string>) (op: OpenApiOperation) =
-  match op with
-  | null -> ()
-  | o ->
-      match o.Parameters with
-      | null -> ()
-      | ps ->
-          for p in ps do
-            match p with
-            | null -> ()
-            | p when not (isNull p.Schema) -> collectSchemaRefsFromSchema doc (HashSet()) acc p.Schema
-            | p when not (isNull p.Content) -> collectSchemasFromContent doc acc p.Content
-            | _ -> ()
-      match o.RequestBody with
-      | null -> ()
-      | rb -> collectSchemasFromContent doc acc rb.Content
-      match o.Responses with
-      | null -> ()
-      | rs -> for r in rs.Values do match r with | null -> () | rr -> collectSchemasFromContent doc acc rr.Content
+  for schema in Microsoft.OpenAPI.FunctionalExtensions.OperationAdapters.schemasFromOperation op do
+    collectSchemaRefsFromSchema doc Set.empty acc schema |> ignore
 
 let cutDocument (doc: OpenApiDocument) (opts: ScissorsOptions) : OpenApiDocument =
   let out = OpenApiDocument()
   out.Info <- doc.Info
   out.Servers <- doc.Servers
-  // paths
   let newPaths = OpenApiPaths()
   let referencedSchemas = HashSet<string>()
-  match doc.Paths with
-  | null -> ()
-  | paths ->
-      paths
-      |> Seq.choose (fun kv ->
-          let path = kv.Key
-          match kv.Value with
-          | null -> None
-          | item when isNull item.Operations -> None
-          | item ->
-              let kept =
-                item.Operations
-                |> Seq.choose (fun opKv ->
-                    let m = opKv.Key
-                    let op = opKv.Value
-                    if operationMatches opts path m op then Some (m, op) else None)
-                |> Seq.toList
-              match kept with
-              | [] -> None
-              | ops ->
-                  let dict = System.Collections.Generic.Dictionary<HttpMethod, OpenApiOperation>()
-                  ops |> List.iter (fun (m,op) -> dict[m] <- op; collectSchemaRefsFromOperation doc referencedSchemas op)
-                  let ni = OpenApiPathItem()
-                  ni.Operations <- dict
-                  Some (path, ni))
-      |> Seq.iter (fun (p, it) -> newPaths.Add(p, it))
+
+  for path, item in Microsoft.OpenAPI.FunctionalExtensions.DocumentAdapters.documentPaths doc do
+    match item with
+    | null -> ()
+    | pathItem ->
+        let kept =
+          Microsoft.OpenAPI.FunctionalExtensions.OperationAdapters.pathItemOperations pathItem
+          |> List.choose (fun (method, op) ->
+              if operationMatches opts path method op then Some (method, op) else None)
+
+        match kept with
+        | [] -> ()
+        | ops ->
+            let dict = Dictionary<HttpMethod, OpenApiOperation>()
+            for method, op in ops do
+              dict[method] <- op
+              collectSchemaRefsFromOperation doc referencedSchemas op
+            let pathItem = OpenApiPathItem()
+            pathItem.Operations <- dict
+            newPaths.Add(path, pathItem)
+
   out.Paths <- newPaths
-  // components
-  match doc.Components with
-  | null -> ()
-  | comps ->
+
+  match Microsoft.OpenAPI.FunctionalExtensions.DocumentAdapters.documentComponents doc with
+  | None -> ()
+  | Some _ ->
       out.Components <- OpenApiComponents()
-      if isNull out.Components.Schemas then out.Components.Schemas <- System.Collections.Generic.Dictionary<string, IOpenApiSchema>()
-      match opts.Transitive, comps.Schemas with
-      | true, null -> ()
-      | true, schemas ->
-          for name in referencedSchemas do
-            match schemas.TryGetValue name with
-            | true, s -> out.Components.Schemas[name] <- s
-            | _ -> ()
-      | _ -> ()
+      if isNull out.Components.Schemas then
+        out.Components.Schemas <- Dictionary<string, IOpenApiSchema>()
+
+      if opts.Transitive then
+        let schemas = Microsoft.OpenAPI.FunctionalExtensions.DocumentAdapters.documentSchemas doc
+        for name in referencedSchemas do
+          match Map.tryFind name schemas with
+          | Some schema -> out.Components.Schemas[name] <- schema
+          | None -> ()
+
   out
-
-

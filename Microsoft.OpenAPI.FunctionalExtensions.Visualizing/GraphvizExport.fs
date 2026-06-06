@@ -25,12 +25,14 @@ let private prettySchemaLabel (id: string) =
 let private tryFindNode (g: SchemaGraph) (id: string) =
   g.Nodes |> Seq.tryFind (fun n -> n.Id = id)
 
-let private cleanKind (kindOpt: string option) =
+let private formatSchemaType (schemaType: JsonSchemaType) =
+  let withoutNull = schemaType &&& ~~~JsonSchemaType.Null
+  if int withoutNull = 0 then "unknown" else string withoutNull
+
+let private cleanKind (kindOpt: JsonSchemaType option) =
   match kindOpt with
   | None -> None
-  | Some k ->
-      let parts = k.Split(',') |> Array.map (fun s -> s.Trim()) |> Array.filter (fun s -> not (s.Equals("Null", System.StringComparison.OrdinalIgnoreCase)))
-      if parts.Length = 0 then Some "unknown" else Some (System.String.Join(", ", parts))
+  | Some kind -> Some (formatSchemaType kind)
 
 let private nodeDecorations (nOpt: SchemaNode option) =
   match nOpt with
@@ -50,7 +52,10 @@ let rec private computeTypeLabel (g: SchemaGraph) (id: string) : string =
   let nOpt = tryFindNode g id
   let hasArrayEdge = g.Edges |> Seq.exists (fun e -> e.FromId = id && (match e.EdgeKind with | ArrayItem -> true | _ -> false))
   let isArrayNode =
-    hasArrayEdge || (nOpt |> Option.bind (fun n -> n.Kind) |> Option.exists (fun k -> k.IndexOf("Array", System.StringComparison.OrdinalIgnoreCase) >= 0))
+    hasArrayEdge
+    || (nOpt
+        |> Option.bind (fun n -> n.Kind)
+        |> Option.exists (fun kind -> (kind &&& JsonSchemaType.Array) = JsonSchemaType.Array))
   let nullableMark = if nOpt |> Option.exists (fun n -> n.Nullable = Some true) then "?" else ""
   if isArrayNode then
     // find first ArrayItem edge and compute child type
@@ -64,8 +69,10 @@ let rec private computeTypeLabel (g: SchemaGraph) (id: string) : string =
     | Some n ->
         // если это компонент-схема и тип Object — показываем имя компонента
         let isComponent = n.Id.StartsWith("#/components/schemas/")
-        let kindRaw = cleanKind n.Kind |> Option.defaultValue ""
-        let preferName = isComponent && (System.String.IsNullOrWhiteSpace kindRaw || kindRaw.Equals("Object", System.StringComparison.OrdinalIgnoreCase))
+        let kindRaw = n.Kind |> Option.map formatSchemaType |> Option.defaultValue ""
+        let preferName =
+          isComponent
+          && (n.Kind.IsNone || n.Kind |> Option.exists (fun kind -> kind = JsonSchemaType.Object))
         if preferName then prettySchemaLabel n.Id + nullableMark
         else
           let kind = if System.String.IsNullOrWhiteSpace kindRaw then prettySchemaLabel n.Id else kindRaw

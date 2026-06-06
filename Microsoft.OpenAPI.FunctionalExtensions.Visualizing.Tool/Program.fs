@@ -200,8 +200,9 @@ let main argv =
       match mergeFiles (inputs |> List.ofSeq) with
       | Error e -> eprintfn "%A" e; 2
       | Ok doc ->
-          saveDocument doc outp
-          0
+          match saveDocument doc outp with
+          | Error msg -> eprintfn "%s" msg; 2
+          | Ok () -> 0
   | Schema_Collect args ->
       let input = args.GetResult(<@ CollectArgs.Input @>)
       let outp = args.GetResult(<@ CollectArgs.Out @>)
@@ -217,7 +218,7 @@ let main argv =
             jw.WriteStartObject()
             jw.WriteString("id", n.Id)
             match n.Title with | Some v -> jw.WriteString("title", v) | None -> ()
-            match n.Kind with | Some v -> jw.WriteString("kind", v) | None -> ()
+            match n.Kind with | Some v -> jw.WriteString("kind", string v) | None -> ()
             match n.Format with | Some v -> jw.WriteString("format", v) | None -> ()
             match n.ReadOnly with | Some v -> jw.WriteBoolean("readOnly", v) | None -> ()
             match n.WriteOnly with | Some v -> jw.WriteBoolean("writeOnly", v) | None -> ()
@@ -333,5 +334,6 @@ let main argv =
       | Ok doc ->
           let opts: ScissorsOptions = { ScissorsOptions.Empty with IncludeTags = tags; IncludePaths = paths; IncludeOperationIds = ops; Transitive = trans }
           let cut = cutDocument doc opts
-          saveDocument cut outp
-          0
+          match saveDocument cut outp with
+          | Error msg -> eprintfn "%s" msg; 2
+          | Ok () -> 0

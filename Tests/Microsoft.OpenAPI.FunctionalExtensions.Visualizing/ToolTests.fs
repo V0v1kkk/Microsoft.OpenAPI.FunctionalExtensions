@@ -9,13 +9,19 @@ open NUnit.Framework
 let private repoRoot =
     Path.GetFullPath(Path.Combine(__SOURCE_DIRECTORY__, "..", ".."))
 
+let private findToolDllInConfig (basePath: string) (configuration: string) =
+    let configPath = Path.Combine(basePath, configuration)
+    if not (Directory.Exists configPath) then None
+    else
+        Directory.EnumerateDirectories(configPath, "net*")
+        |> Seq.tryPick (fun tfmDir ->
+            let path = Path.Combine(tfmDir, "Microsoft.OpenAPI.FunctionalExtensions.Visualizing.Tool.dll")
+            if File.Exists path then Some path else None)
+
 let private resolveToolDll () =
     let basePath = Path.Combine(repoRoot, "Microsoft.OpenAPI.FunctionalExtensions.Visualizing.Tool", "bin")
     [ "Debug"; "Release" ]
-    |> List.tryPick (fun cfg ->
-        let path =
-            Path.Combine(basePath, cfg, "net9.0", "Microsoft.OpenAPI.FunctionalExtensions.Visualizing.Tool.dll")
-        if File.Exists path then Some path else None)
+    |> List.tryPick (findToolDllInConfig basePath)
     |> Option.defaultWith (fun () ->
         failwith "Visualizing tool DLL not found. Build the solution before running these tests.")
 

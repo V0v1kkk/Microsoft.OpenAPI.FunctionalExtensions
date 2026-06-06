@@ -5,11 +5,6 @@ open System.Collections.Generic
 open Microsoft.OpenApi
 open Microsoft.OpenAPI.FunctionalExtensions.ActivePatterns
 
-type CompositionKind =
-  | AllOf
-  | OneOf
-  | AnyOf
-
 type SchemaEdgeKind =
   | Property of propertyName:string
   | ArrayItem
@@ -21,7 +16,7 @@ type SchemaNodeRef = string // JSON pointer (or reference Id if available)
 type SchemaNode = {
   Id: SchemaNodeRef
   Title: string option
-  Kind: string option
+  Kind: JsonSchemaType option
   Nullable: bool option
   Description: string option
   Format: string option
@@ -58,9 +53,7 @@ let private addNode (graph: SchemaGraph) (id: SchemaNodeRef) (schema: IOpenApiSc
   graph.Nodes.Add {
     Id = id
     Title = Microsoft.OpenAPI.FunctionalExtensions.SchemaAdapters.schemaTitle schema
-    Kind =
-      Microsoft.OpenAPI.FunctionalExtensions.SchemaAdapters.schemaType schema
-      |> Option.map string
+    Kind = Microsoft.OpenAPI.FunctionalExtensions.SchemaAdapters.schemaType schema
     Nullable = Some (Microsoft.OpenAPI.FunctionalExtensions.SchemaAdapters.schemaIsNullable schema)
     Description = Microsoft.OpenAPI.FunctionalExtensions.SchemaAdapters.schemaDescription schema
     Format = Microsoft.OpenAPI.FunctionalExtensions.SchemaAdapters.schemaFormat schema

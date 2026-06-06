@@ -8,6 +8,7 @@ open Microsoft.OpenAPI.FunctionalExtensions.OpenApiReaderTools
 open OpenApiTraversal
 open OpenApiOperationsTraversal
 open OpenApiSchemaAnalysis
+open Microsoft.OpenAPI.FunctionalExtensions.ActivePatterns
 open ResultEx
 
 let private jsonOptions = JsonSerializerOptions(WriteIndented = true)
@@ -19,6 +20,18 @@ let private requireDoc path : OpenApiDocument =
     | Ok doc -> doc
     | Error e -> raise (System.InvalidOperationException $"Failed to read spec: %A{e}")
 
+type SchemaNodeSnapshot = {
+    Id: string
+    Title: string option
+    Kind: string option
+    Nullable: bool option
+    Description: string option
+    Format: string option
+    ReadOnly: bool option
+    EnumValues: string list option
+    WriteOnly: bool option
+}
+
 type SchemaEdgeSnapshot = {
     FromId: string
     ToId: string
@@ -26,9 +39,20 @@ type SchemaEdgeSnapshot = {
 }
 
 type SchemaGraphSnapshot = {
-    Nodes: SchemaNode list
+    Nodes: SchemaNodeSnapshot list
     Edges: SchemaEdgeSnapshot list
 }
+
+let private toNodeSnapshot (node: SchemaNode) =
+    { Id = node.Id
+      Title = node.Title
+      Kind = node.Kind |> Option.map string
+      Nullable = node.Nullable
+      Description = node.Description
+      Format = node.Format
+      ReadOnly = node.ReadOnly
+      EnumValues = node.EnumValues
+      WriteOnly = node.WriteOnly }
 
 let private edgeKindToString = function
     | Property name -> $"Property({name})"
@@ -42,6 +66,7 @@ let private toGraphSnapshot (graph: SchemaGraph) =
     let nodes =
         graph.Nodes
         |> Seq.sortBy (fun n -> n.Id)
+        |> Seq.map toNodeSnapshot
         |> Seq.toList
 
     let edges =
