@@ -44,14 +44,19 @@ with
 type LintArgs =
   | [<Mandatory>] Input of path:string
   | Disable_Rule of ruleId:string
+  | Format of string
+  | Json
 with
   interface IArgParserTemplate with
     member s.Usage =
       match s with
       | Input _ -> "Path to OpenAPI spec (yaml/json)"
       | Disable_Rule _ -> "Disable a lint rule by ID (repeatable)"
+      | Format _ -> "Output format: text (default) or json"
+      | Json -> "Output lint results as JSON (same as --format json)"
 
 type CliArgs =
+  | [<CliPrefix(CliPrefix.DoubleDash)>] Version
   | [<CliPrefix(CliPrefix.DoubleDash)>] Lint of ParseResults<LintArgs>
   | [<CliPrefix(CliPrefix.DoubleDash)>] Schema_Svg of ParseResults<SchemaArgs>
   | [<CliPrefix(CliPrefix.DoubleDash)>] Route_Svg of ParseResults<RouteArgs>
@@ -65,6 +70,7 @@ with
   interface IArgParserTemplate with
     member s.Usage =
       match s with
+      | Version -> "Print tool version and exit"
       | Lint _ -> "Lint an OpenAPI specification"
       | Schema_Svg _ -> "Render schema graph to SVG"
       | Route_Svg _ -> "Render route map to SVG"
@@ -139,30 +145,82 @@ let private printViolation (violation: Types.LintViolation) =
     violation.Message
     violation.Rule
 
+let private severityToJson (severity: Types.Severity) =
+  match severity with
+  | Types.Error -> "error"
+  | Types.Warning -> "warning"
+  | Types.Info -> "info"
+
+let private printViolationsJson (violations: Types.LintViolation list) =
+  use stdout = Console.OpenStandardOutput()
+  use jw = new System.Text.Json.Utf8JsonWriter(stdout, System.Text.Json.JsonWriterOptions(Indented = true))
+  jw.WriteStartArray()
+  for violation in violations do
+    jw.WriteStartObject()
+    jw.WriteString("rule", violation.Rule)
+    jw.WriteString("severity", severityToJson violation.Severity)
+    jw.WriteString("message", violation.Message)
+    jw.WriteString("location", formatLocation violation.Location)
+    jw.WriteEndObject()
+  jw.WriteEndArray()
+  jw.Flush()
+  stdout.Flush()
+
+let private printVersion () =
+  match System.Reflection.Assembly.GetEntryAssembly() with
+  | null -> printfn "0.9.0"
+  | assembly ->
+      match assembly.GetName().Version with
+      | null -> printfn "0.9.0"
+      | version -> printfn "%s" (version.ToString(3))
+
 [<EntryPoint>]
 let main argv =
   let parser = ArgumentParser.Create<CliArgs>(programName = "openapi-fx")
   let results = parser.ParseCommandLine argv
+  if results.Contains(<@ CliArgs.Version @>) then
+    printVersion ()
+    0
+  else
   match results.GetSubCommand() with
+  | Version ->
+      printVersion ()
+      0
   | Lint lintArgs ->
       let input = lintArgs.GetResult(<@ LintArgs.Input @>)
       let disabledRules = lintArgs.GetResults(<@ LintArgs.Disable_Rule @>) |> List.ofSeq
-      match readSpecification input with
-      | Error e -> eprintfn "%A" e; 2
-      | Ok doc ->
-          let config =
-            LinterConfig.defaults
-            |> LinterConfig.without disabledRules
+      let outputFormat =
+        if lintArgs.Contains(<@ LintArgs.Json @>) then
+          Ok "json"
+        else
+          match lintArgs.TryGetResult(<@ LintArgs.Format @>) with
+          | None | Some "text" -> Ok "text"
+          | Some "json" -> Ok "json"
+          | Some format -> Error format
+      match outputFormat with
+      | Error format ->
+          eprintfn "Unknown lint output format: %s (expected text or json)" format
+          2
+      | Ok format ->
+          match readSpecification input with
+          | Error e -> eprintfn "%A" e; 2
+          | Ok doc ->
+              let config =
+                LinterConfig.defaults
+                |> LinterConfig.without disabledRules
 
-          let result = Linter.lintWithConfig config doc
+              let result = Linter.lintWithConfig config doc
 
-          for violation in result.Violations do
-            printViolation violation
+              match format with
+              | "json" -> printViolationsJson result.Violations
+              | _ ->
+                  for violation in result.Violations do
+                    printViolation violation
 
-          if result.Violations |> List.exists (fun violation -> violation.Severity = Types.Error) then
-            1
-          else
-            0
+              if result.Violations |> List.exists (fun violation -> violation.Severity = Types.Error) then
+                1
+              else
+                0
   | Schema_Svg schema ->
       let input = schema.GetResult(<@ SchemaArgs.Input @>)
       let outp = schema.GetResult(<@ SchemaArgs.Out @>)
@@ -309,15 +367,29 @@ let main argv =
             jw.WriteStartObject()
             jw.WriteString("path", r.Path)
             jw.WriteString("method", r.Method)
-            match r.OperationId with | Some v -> jw.WriteString("operationId", v) | None -> ()
-            jw.WritePropertyName("tags");
-            jw.WriteStartArray(); for t in r.Tags do jw.WriteStringValue(t); jw.WriteEndArray()
-            jw.WritePropertyName("parameterSchemas");
-            jw.WriteStartArray(); for s in r.ParameterSchemas do jw.WriteStringValue(s); jw.WriteEndArray()
-            jw.WritePropertyName("requestSchemas");
-            jw.WriteStartArray(); for s in r.RequestSchemas do jw.WriteStringValue(s); jw.WriteEndArray()
-            jw.WritePropertyName("responseSchemas");
-            jw.WriteStartArray(); for s in r.ResponseSchemas do jw.WriteStringValue(s); jw.WriteEndArray()
+            match r.OperationId with
+            | Some v -> jw.WriteString("operationId", v)
+            | None -> ()
+            jw.WritePropertyName("tags")
+            jw.WriteStartArray()
+            for t in r.Tags do
+              jw.WriteStringValue(t)
+            jw.WriteEndArray()
+            jw.WritePropertyName("parameterSchemas")
+            jw.WriteStartArray()
+            for s in r.ParameterSchemas do
+              jw.WriteStringValue(s)
+            jw.WriteEndArray()
+            jw.WritePropertyName("requestSchemas")
+            jw.WriteStartArray()
+            for s in r.RequestSchemas do
+              jw.WriteStringValue(s)
+            jw.WriteEndArray()
+            jw.WritePropertyName("responseSchemas")
+            jw.WriteStartArray()
+            for s in r.ResponseSchemas do
+              jw.WriteStringValue(s)
+            jw.WriteEndArray()
             jw.WriteBoolean("returnsArray", r.ReturnsArray)
             jw.WriteBoolean("returnsArrayViaData", r.ReturnsArrayViaData)
             jw.WriteEndObject()
