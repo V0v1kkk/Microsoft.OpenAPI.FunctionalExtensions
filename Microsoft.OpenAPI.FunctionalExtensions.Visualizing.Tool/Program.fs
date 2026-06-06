@@ -10,6 +10,7 @@ open Microsoft.OpenApi
 open Microsoft.OpenAPI.FunctionalExtensions.OpenApiScissors
 open Microsoft.OpenAPI.FunctionalExtensions.OpenApiWriterTools
 open Microsoft.OpenAPI.FunctionalExtensions.Linting
+open Microsoft.OpenAPI.FunctionalExtensions.ActivePatterns
 
 type SchemaArgs =
   | [<Mandatory>] Input of path:string
@@ -23,7 +24,7 @@ with
       | Input _ -> "Path to OpenAPI spec (yaml/json)"
       | Out _ -> "Output SVG path"
       | Component _ -> "Component schema name to visualize (from #/components/schemas)"
-      | Dot _ -> "Output DOT instead of SVG"
+      | Dot -> "Output DOT instead of SVG"
 
 type RouteArgs =
   | [<Mandatory>] Input of path:string
@@ -117,7 +118,7 @@ with
       | Include_Tag _ -> "Include operations with this tag (repeatable)"
       | Include_Path _ -> "Include routes that contain this substring (repeatable)"
       | Include_Operation _ -> "Include operations by id (repeatable)"
-      | No_Transitive _ -> "Do not include transitive component schemas"
+      | No_Transitive -> "Do not include transitive component schemas"
 
 let private formatSeverity (severity: Types.Severity) =
   match severity with
@@ -300,7 +301,11 @@ let main argv =
             | MapValue -> jw.WriteString("kind", "mapValue")
             | Composition ck ->
                 jw.WriteString("kind", "composition");
-                let v = match ck with | AllOf -> "allOf" | OneOf -> "oneOf" | AnyOf -> "anyOf"
+                let v =
+                  match ck with
+                  | CompositionKind.AllOf -> "allOf"
+                  | CompositionKind.OneOf -> "oneOf"
+                  | CompositionKind.AnyOf -> "anyOf"
                 jw.WriteString("type", v)
             jw.WriteEndObject()
           jw.WriteEndArray()

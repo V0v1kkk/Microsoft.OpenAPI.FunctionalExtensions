@@ -32,7 +32,7 @@ let private pathTemplateParameters (path: string) =
 
 let private pathLevelParameters (parameters: IOpenApiParameter list) =
     parameters
-    |> List.filter (fun parameter -> parameterIn parameter = ParameterLocation.Path)
+    |> List.filter (fun parameter -> parameterIn parameter = Nullable(ParameterLocation.Path))
     |> List.map parameterName
 
 let private responseDescription (response: IOpenApiResponse) = AdapterCore.ofObj response.Description
@@ -320,7 +320,7 @@ let duplicatePathParameter (document: OpenApiDocument) : LintViolation list =
         let operationId = operationIdOption operation
 
         (pathParameters @ OperationAdapters.operationParameters operation)
-        |> List.filter (fun parameter -> parameterIn parameter = ParameterLocation.Path)
+        |> List.filter (fun parameter -> parameterIn parameter = Nullable(ParameterLocation.Path))
         |> List.groupBy parameterName
         |> List.collect (fun (parameterName, duplicates) ->
             match duplicates with
