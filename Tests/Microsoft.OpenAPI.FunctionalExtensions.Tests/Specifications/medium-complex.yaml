@@ -1,0 +1,355 @@
+openapi: "3.0.3"
+info: { title: Medium Complexity API, version: "2.1.0" }
+tags:
+  - { name: users }
+  - { name: orders }
+  - { name: products }
+  - { name: inventory }
+  - { name: analytics }
+  - { name: admin }
+paths:
+  /users:
+    get: { tags: [users], operationId: listUsers, responses: { "200": { description: OK, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/User" } } } } } } }
+    post: { tags: [users], operationId: createUser, requestBody: { content: { application/json: { schema: { $ref: "#/components/schemas/UserCreate" } } } }, responses: { "201": { description: Created, content: { application/json: { schema: { $ref: "#/components/schemas/User" } } } } } }
+  /users/{userId}:
+    get: { tags: [users], operationId: getUser, parameters: [{ name: userId, in: path, required: true, schema: { type: string } }], responses: { "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/User" } } } } } }
+    put: { tags: [users], operationId: updateUser, parameters: [{ name: userId, in: path, required: true, schema: { type: string } }], requestBody: { content: { application/json: { schema: { $ref: "#/components/schemas/UserUpdate" } } } }, responses: { "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/User" } } } } } }
+    delete: { tags: [users], operationId: deleteUser, parameters: [{ name: userId, in: path, required: true, schema: { type: string } }], responses: { "204": { description: Deleted } } }
+  /users/{userId}/addresses:
+    get: { tags: [users], operationId: listUserAddresses, parameters: [{ name: userId, in: path, required: true, schema: { type: string } }], responses: { "200": { description: OK, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/Address" } } } } } } }
+  /orders:
+    get: { tags: [orders], operationId: listOrders, parameters: [{ name: status, in: query, schema: { $ref: "#/components/schemas/OrderStatus" } }], responses: { "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/OrderList" } } } } } }
+    post: { tags: [orders], operationId: createOrder, requestBody: { content: { application/json: { schema: { $ref: "#/components/schemas/OrderCreate" } } } }, responses: { "201": { description: Created, content: { application/json: { schema: { $ref: "#/components/schemas/Order" } } } } } }
+  /orders/{orderId}:
+    get: { tags: [orders], operationId: getOrder, parameters: [{ name: orderId, in: path, required: true, schema: { type: string } }], responses: { "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/Order" } } } } } }
+  /orders/{orderId}/items:
+    get: { tags: [orders], operationId: listOrderItems, parameters: [{ name: orderId, in: path, required: true, schema: { type: string } }], responses: { "200": { description: OK, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/OrderItem" } } } } } } }
+  /orders/{orderId}/cancel:
+    post: { tags: [orders], operationId: cancelOrder, parameters: [{ name: orderId, in: path, required: true, schema: { type: string } }], responses: { "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/Order" } } } } } }
+  /products:
+    get: { tags: [products], operationId: listProducts, responses: { "200": { description: OK, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/Product" } } } } } } }
+    post: { tags: [products], operationId: createProduct, requestBody: { content: { application/json: { schema: { $ref: "#/components/schemas/ProductCreate" } } } }, responses: { "201": { description: Created, content: { application/json: { schema: { $ref: "#/components/schemas/Product" } } } } } }
+  /products/{productId}:
+    get: { tags: [products], operationId: getProduct, parameters: [{ name: productId, in: path, required: true, schema: { type: string } }], responses: { "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/Product" } } } } } }
+    patch: { tags: [products], operationId: patchProduct, parameters: [{ name: productId, in: path, required: true, schema: { type: string } }], requestBody: { content: { application/json: { schema: { $ref: "#/components/schemas/ProductPatch" } } } }, responses: { "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/Product" } } } } } }
+  /products/{productId}/variants:
+    get: { tags: [products], operationId: listProductVariants, parameters: [{ name: productId, in: path, required: true, schema: { type: string } }], responses: { "200": { description: OK, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/ProductVariant" } } } } } } }
+  /products/search:
+    post: { tags: [products], operationId: searchProducts, requestBody: { content: { application/json: { schema: { $ref: "#/components/schemas/ProductSearch" } } } }, responses: { "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/ProductSearchResult" } } } } } }
+  /inventory:
+    get: { tags: [inventory], operationId: listInventory, responses: { "200": { description: OK, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/InventoryRecord" } } } } } } }
+  /inventory/{sku}:
+    get: { tags: [inventory], operationId: getInventoryBySku, parameters: [{ name: sku, in: path, required: true, schema: { type: string } }], responses: { "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/InventoryRecord" } } } } } }
+    put: { tags: [inventory], operationId: updateInventory, parameters: [{ name: sku, in: path, required: true, schema: { type: string } }], requestBody: { content: { application/json: { schema: { $ref: "#/components/schemas/InventoryUpdate" } } } }, responses: { "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/InventoryRecord" } } } } } }
+  /inventory/warehouses:
+    get: { tags: [inventory], operationId: listWarehouses, responses: { "200": { description: OK, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/Warehouse" } } } } } } }
+  /inventory/warehouses/{warehouseId}/stock:
+    get: { tags: [inventory], operationId: getWarehouseStock, parameters: [{ name: warehouseId, in: path, required: true, schema: { type: string } }], responses: { "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/WarehouseStock" } } } } } }
+  /analytics/sales:
+    get: { tags: [analytics], operationId: getSalesReport, responses: { "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/SalesReport" } } } } } }
+  /analytics/users/activity:
+    get: { tags: [analytics], operationId: getUserActivity, responses: { "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/UserActivityReport" } } } } } }
+  /analytics/products/performance:
+    get: { tags: [analytics], operationId: getProductPerformance, responses: { "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/ProductPerformanceReport" } } } } } }
+  /admin/settings:
+    get: { tags: [admin], operationId: getSettings, responses: { "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/AdminSettings" } } } } } }
+    put: { tags: [admin], operationId: updateSettings, requestBody: { content: { application/json: { schema: { $ref: "#/components/schemas/AdminSettings" } } } }, responses: { "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/AdminSettings" } } } } } }
+  /admin/audit-log:
+    get: { tags: [admin], operationId: listAuditLog, responses: { "200": { description: OK, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/AuditEntry" } } } } } } }
+  /health:
+    get: { tags: [admin], operationId: healthCheck, responses: { "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/HealthStatus" } } } } } }
+components:
+  schemas:
+    Timestamped:
+      type: object
+      properties:
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        createdBy: { type: string }
+        updatedBy: { type: string }
+        version: { type: integer }
+        tags: { type: array, items: { type: string } }
+        metadata: { type: object, additionalProperties: { type: string } }
+    Identifiable:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        externalId: { type: string }
+        slug: { type: string }
+    User:
+      allOf:
+        - { $ref: "#/components/schemas/Identifiable" }
+        - { $ref: "#/components/schemas/Timestamped" }
+        - type: object
+          properties:
+            email: { type: string, format: email }
+            displayName: { type: string }
+            role: { $ref: "#/components/schemas/UserRole" }
+            status: { $ref: "#/components/schemas/UserStatus" }
+            profile: { $ref: "#/components/schemas/UserProfile" }
+            preferences: { type: object, additionalProperties: true }
+    UserProfile:
+      type: object
+      properties:
+        firstName: { type: string }
+        lastName: { type: string }
+        phone: { type: string }
+        avatarUrl: { type: string, format: uri }
+        locale: { type: string }
+        timezone: { type: string }
+        bio: { type: string }
+        birthDate: { type: string, format: date }
+        socialLinks: { type: object, additionalProperties: { type: string, format: uri } }
+    UserCreate:
+      type: object
+      required: [email, displayName]
+      properties:
+        email: { type: string }
+        displayName: { type: string }
+        role: { $ref: "#/components/schemas/UserRole" }
+    UserUpdate:
+      type: object
+      properties:
+        displayName: { type: string }
+        profile: { $ref: "#/components/schemas/UserProfile" }
+        status: { $ref: "#/components/schemas/UserStatus" }
+    UserRole: { type: string, enum: [guest, member, manager, admin] }
+    UserStatus: { type: string, enum: [active, suspended, deleted] }
+    Address:
+      type: object
+      properties:
+        id: { type: string }
+        line1: { type: string }
+        line2: { type: string }
+        city: { type: string }
+        region: { type: string }
+        postalCode: { type: string }
+        country: { type: string }
+        isDefault: { type: boolean }
+        geo: { $ref: "#/components/schemas/GeoPoint" }
+    GeoPoint:
+      type: object
+      properties:
+        latitude: { type: number, format: double }
+        longitude: { type: number, format: double }
+    Money:
+      type: object
+      properties:
+        amount: { type: number, format: decimal }
+        currency: { type: string, minLength: 3, maxLength: 3 }
+    OrderStatus: { type: string, enum: [draft, pending, paid, shipped, delivered, cancelled] }
+    Order:
+      allOf:
+        - { $ref: "#/components/schemas/Identifiable" }
+        - { $ref: "#/components/schemas/Timestamped" }
+        - type: object
+          properties:
+            userId: { type: string }
+            status: { $ref: "#/components/schemas/OrderStatus" }
+            items: { type: array, items: { $ref: "#/components/schemas/OrderItem" } }
+            subtotal: { $ref: "#/components/schemas/Money" }
+            tax: { $ref: "#/components/schemas/Money" }
+            shipping: { $ref: "#/components/schemas/Money" }
+            total: { $ref: "#/components/schemas/Money" }
+            shippingAddress: { $ref: "#/components/schemas/Address" }
+            billingAddress: { $ref: "#/components/schemas/Address" }
+            notes: { type: string }
+    OrderItem:
+      type: object
+      properties:
+        productId: { type: string }
+        sku: { type: string }
+        name: { type: string }
+        quantity: { type: integer }
+        unitPrice: { $ref: "#/components/schemas/Money" }
+        lineTotal: { $ref: "#/components/schemas/Money" }
+        attributes: { type: object, additionalProperties: { type: string } }
+    OrderCreate:
+      type: object
+      required: [userId, items]
+      properties:
+        userId: { type: string }
+        items: { type: array, items: { $ref: "#/components/schemas/OrderItemInput" } }
+        shippingAddressId: { type: string }
+    OrderItemInput:
+      type: object
+      properties:
+        productId: { type: string }
+        quantity: { type: integer }
+    OrderList:
+      type: object
+      properties:
+        items: { type: array, items: { $ref: "#/components/schemas/Order" } }
+        page: { type: integer }
+        pageSize: { type: integer }
+        total: { type: integer }
+    Product:
+      allOf:
+        - { $ref: "#/components/schemas/Identifiable" }
+        - { $ref: "#/components/schemas/Timestamped" }
+        - type: object
+          properties:
+            name: { type: string }
+            description: { type: string }
+            category: { $ref: "#/components/schemas/ProductCategory" }
+            price: { $ref: "#/components/schemas/Money" }
+            attributes: { type: object, additionalProperties: { oneOf: [{ type: string }, { type: number }, { type: boolean }] } }
+            media: { type: array, items: { $ref: "#/components/schemas/MediaAsset" } }
+            variants: { type: array, items: { $ref: "#/components/schemas/ProductVariant" } }
+    ProductCategory:
+      oneOf:
+        - { $ref: "#/components/schemas/CategoryLeaf" }
+        - { $ref: "#/components/schemas/CategoryBranch" }
+    CategoryLeaf:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+    CategoryBranch:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        children: { type: array, items: { $ref: "#/components/schemas/ProductCategory" } }
+    ProductCreate:
+      type: object
+      required: [name, price]
+      properties:
+        name: { type: string }
+        price: { $ref: "#/components/schemas/Money" }
+        category: { $ref: "#/components/schemas/ProductCategory" }
+    ProductPatch:
+      type: object
+      properties:
+        name: { type: string }
+        description: { type: string }
+        price: { $ref: "#/components/schemas/Money" }
+    ProductVariant:
+      type: object
+      properties:
+        id: { type: string }
+        sku: { type: string }
+        options: { type: object, additionalProperties: { type: string } }
+        price: { $ref: "#/components/schemas/Money" }
+        inventory: { $ref: "#/components/schemas/InventoryRecord" }
+    ProductSearch:
+      type: object
+      properties:
+        query: { type: string }
+        filters: { type: object, additionalProperties: { type: array, items: { type: string } } }
+        sort: { type: string }
+        page: { type: integer }
+        pageSize: { type: integer }
+    ProductSearchResult:
+      type: object
+      properties:
+        hits: { type: array, items: { $ref: "#/components/schemas/Product" } }
+        facets: { type: object, additionalProperties: { type: array, items: { type: string } } }
+        total: { type: integer }
+    MediaAsset:
+      type: object
+      properties:
+        url: { type: string, format: uri }
+        mimeType: { type: string }
+        width: { type: integer }
+        height: { type: integer }
+        altText: { type: string }
+    InventoryRecord:
+      type: object
+      properties:
+        sku: { type: string }
+        warehouseId: { type: string }
+        quantity: { type: integer }
+        reserved: { type: integer }
+        available: { type: integer }
+        reorderLevel: { type: integer }
+        lastCountedAt: { type: string, format: date-time }
+    InventoryUpdate:
+      type: object
+      properties:
+        quantity: { type: integer }
+        reserved: { type: integer }
+    Warehouse:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        address: { $ref: "#/components/schemas/Address" }
+        capacity: { type: integer }
+        zones: { type: array, items: { type: string } }
+    WarehouseStock:
+      type: object
+      properties:
+        warehouseId: { type: string }
+        items: { type: array, items: { $ref: "#/components/schemas/InventoryRecord" } }
+        summary: { type: object, additionalProperties: { type: integer } }
+    SalesReport:
+      type: object
+      properties:
+        period: { type: string }
+        revenue: { $ref: "#/components/schemas/Money" }
+        orderCount: { type: integer }
+        averageOrderValue: { $ref: "#/components/schemas/Money" }
+        topProducts: { type: array, items: { $ref: "#/components/schemas/ProductSalesMetric" } }
+    ProductSalesMetric:
+      type: object
+      properties:
+        productId: { type: string }
+        name: { type: string }
+        unitsSold: { type: integer }
+        revenue: { $ref: "#/components/schemas/Money" }
+    UserActivityReport:
+      type: object
+      properties:
+        activeUsers: { type: integer }
+        newUsers: { type: integer }
+        sessions: { type: integer }
+        eventsByType: { type: object, additionalProperties: { type: integer } }
+    ProductPerformanceReport:
+      type: object
+      properties:
+        views: { type: integer }
+        conversions: { type: integer }
+        returnRate: { type: number, format: float }
+        byCategory: { type: array, items: { $ref: "#/components/schemas/CategoryMetric" } }
+    CategoryMetric:
+      type: object
+      properties:
+        categoryId: { type: string }
+        revenue: { $ref: "#/components/schemas/Money" }
+        units: { type: integer }
+    AdminSettings:
+      type: object
+      properties:
+        maintenanceMode: { type: boolean }
+        maxUploadSizeMb: { type: integer }
+        featureFlags: { type: object, additionalProperties: { type: boolean } }
+        notificationChannels: { type: array, items: { type: string } }
+        retentionDays: { type: integer }
+    AuditEntry:
+      type: object
+      properties:
+        id: { type: string }
+        actor: { type: string }
+        action: { type: string }
+        resource: { type: string }
+        timestamp: { type: string, format: date-time }
+        details: { type: object, additionalProperties: true }
+    HealthStatus:
+      type: object
+      properties:
+        status: { type: string, enum: [ok, degraded, down] }
+        checks: { type: object, additionalProperties: { $ref: "#/components/schemas/HealthCheck" } }
+    HealthCheck:
+      type: object
+      properties:
+        status: { type: string }
+        latencyMs: { type: integer }
+        message: { type: string }
+    ErrorResponse:
+      type: object
+      properties:
+        code: { type: string }
+        message: { type: string }
+        details: { type: array, items: { type: string } }
+        traceId: { type: string }

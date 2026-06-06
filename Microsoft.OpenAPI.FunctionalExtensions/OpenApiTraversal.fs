@@ -78,38 +78,41 @@ let collectSchemaGraphWithRoot (root: IOpenApiSchema) (rootPointer: string) : Sc
 
   let rec walk (path: string) (schema: IOpenApiSchema) (edgeFrom: SchemaNodeRef option) (edgeKind: SchemaEdgeKind option) =
     let id = nodeId path schema
-    if visited.Add id then addNode graph id schema
+    let isNew = visited.Add id
+    if isNew then addNode graph id schema
+
     match edgeFrom, edgeKind with
     | Some f, Some k -> addEdge graph f id k
     | _ -> ()
 
-    Microsoft.OpenAPI.FunctionalExtensions.SchemaAdapters.schemaProperties schema
-    |> Map.iter (fun key value ->
-        walk ($"{path}/properties/{key}") value (Some id) (Some (Property key)))
+    if not isNew then () else
+      Microsoft.OpenAPI.FunctionalExtensions.SchemaAdapters.schemaProperties schema
+      |> Map.iter (fun key value ->
+          walk ($"{path}/properties/{key}") value (Some id) (Some (Property key)))
 
-    // items — when array of a referenced component, use the component pointer for the child, not '/items'
-    match schema with
-    | ArraySchema items ->
-        let childPath =
-          match Microsoft.OpenAPI.FunctionalExtensions.ReferenceAdapters.trySchemaReferenceId items with
-          | Some rid when not (String.IsNullOrWhiteSpace rid) ->
-              Microsoft.OpenAPI.FunctionalExtensions.ReferenceAdapters.referencePointer rid
-          | _ -> $"{path}/items"
-        walk childPath items (Some id) (Some ArrayItem)
-    | _ -> ()
+      // items — when array of a referenced component, use the component pointer for the child, not '/items'
+      match schema with
+      | ArraySchema items ->
+          let childPath =
+            match Microsoft.OpenAPI.FunctionalExtensions.ReferenceAdapters.trySchemaReferenceId items with
+            | Some rid when not (String.IsNullOrWhiteSpace rid) ->
+                Microsoft.OpenAPI.FunctionalExtensions.ReferenceAdapters.referencePointer rid
+            | _ -> $"{path}/items"
+          walk childPath items (Some id) (Some ArrayItem)
+      | _ -> ()
 
-    match Microsoft.OpenAPI.FunctionalExtensions.SchemaAdapters.schemaAdditionalProperties schema with
-    | Some additionalProperties ->
-        walk ($"{path}/additionalProperties") additionalProperties (Some id) (Some MapValue)
-    | None -> ()
+      match Microsoft.OpenAPI.FunctionalExtensions.SchemaAdapters.schemaAdditionalProperties schema with
+      | Some additionalProperties ->
+          walk ($"{path}/additionalProperties") additionalProperties (Some id) (Some MapValue)
+      | None -> ()
 
-    let inline each (kind: CompositionKind) (schemas: IOpenApiSchema list) (seg: string) =
-      for s in schemas do
-        walk ($"{path}/{seg}") s (Some id) (Some (Composition kind))
+      let inline each (kind: CompositionKind) (schemas: IOpenApiSchema list) (seg: string) =
+        for s in schemas do
+          walk ($"{path}/{seg}") s (Some id) (Some (Composition kind))
 
-    each AllOf (Microsoft.OpenAPI.FunctionalExtensions.SchemaAdapters.schemaAllOf schema) "allOf"
-    each OneOf (Microsoft.OpenAPI.FunctionalExtensions.SchemaAdapters.schemaOneOf schema) "oneOf"
-    each AnyOf (Microsoft.OpenAPI.FunctionalExtensions.SchemaAdapters.schemaAnyOf schema) "anyOf"
+      each AllOf (Microsoft.OpenAPI.FunctionalExtensions.SchemaAdapters.schemaAllOf schema) "allOf"
+      each OneOf (Microsoft.OpenAPI.FunctionalExtensions.SchemaAdapters.schemaOneOf schema) "oneOf"
+      each AnyOf (Microsoft.OpenAPI.FunctionalExtensions.SchemaAdapters.schemaAnyOf schema) "anyOf"
 
   walk rootPointer root None None
   graph

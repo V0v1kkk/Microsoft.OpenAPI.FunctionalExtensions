@@ -1,0 +1,47 @@
+openapi: "3.0.3"
+info:
+  title: Circular References Test
+  version: "1.0"
+paths:
+  /nodes:
+    get:
+      operationId: listNodes
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TreeNode"
+components:
+  schemas:
+    TreeNode:
+      type: object
+      properties:
+        name:
+          type: string
+        children:
+          type: array
+          items:
+            $ref: "#/components/schemas/TreeNode"
+        parent:
+          $ref: "#/components/schemas/TreeNode"
+    LinkedList:
+      type: object
+      properties:
+        value:
+          type: integer
+        next:
+          $ref: "#/components/schemas/LinkedList"
+    MutualA:
+      type: object
+      properties:
+        b:
+          $ref: "#/components/schemas/MutualB"
+    MutualB:
+      type: object
+      properties:
+        a:
+          $ref: "#/components/schemas/MutualA"

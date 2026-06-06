@@ -23,6 +23,8 @@
       <Compile Include="OpenApiSchemaAnalysisTests.fs" />
         <Compile Include="AdapterCoreTests.fs" />
         <Compile Include="PropertyTests.fs" />
+        <Compile Include="CircularRefTests.fs" />
+        <Compile Include="ComplexSpecTests.fs" />
         <Compile Include="SchemaAdaptersTests.fs" />
         <Compile Include="DocumentAdaptersTests.fs" />
         <Compile Include="ScissorsTests.fs" />
@@ -44,6 +46,12 @@
           <CopyToOutputDirectory>Always</CopyToOutputDirectory>
         </Content>
       <Content Include="Specifications\e-shop-example.yaml">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </Content>
+      <Content Include="Specifications\circular-refs.yaml">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </Content>
+      <Content Include="Specifications\medium-complex.yaml">
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </Content>
       <Content Include="..\..\Samples\petstore.yaml">
