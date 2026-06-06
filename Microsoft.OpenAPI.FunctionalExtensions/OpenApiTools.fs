@@ -73,13 +73,13 @@ let operationHasExtensionWithTrueValue (operation:OpenApiOperation) operationNam
     | Some extensionStringValue when extensionStringValue.icompare "true" -> true
     | _ -> false
 
-let isInternalOperation operation =
+(*let isInternalOperation operation =
   operationHasExtensionWithTrueValue operation "x-vendor-product-internal"
   
 let isNotInternalOperation: OpenApiOperation -> bool = isInternalOperation >> invert
   
 let isImplementedOperation operation =
-  operationHasExtensionWithTrueValue operation "x-vendor-product-implemented"  
+  operationHasExtensionWithTrueValue operation "x-vendor-product-implemented"*)  
   
 
 let getOperations (document:OpenApiDocument) =
@@ -88,19 +88,22 @@ let getOperations (document:OpenApiDocument) =
   |> Seq.collect (fun item -> item.Operations)
   |> Seq.map (fun item -> item.Value)
   
-let getImplementedOperations document =
+let getOperationsBySelector document selector =
+  document |> getOperations |> Seq.filter selector
+  
+(*let getImplementedOperations document =
   getOperations document
   |> Seq.where isImplementedOperation
   
 let getInternalOperations document =
   getOperations document
-  |> Seq.where isInternalOperation
+  |> Seq.where isInternalOperation*)
   
  
-let getNotInternalImplementedOperations document =
+(*let getNotInternalImplementedOperations document =
   getOperations document
   |> Seq.filter isImplementedOperation
-  |> Seq.filter isNotInternalOperation
+  |> Seq.filter isNotInternalOperation*)
 
 let getSchemaByName (document:OpenApiDocument) (schemaName) =
   document.Components.Schemas

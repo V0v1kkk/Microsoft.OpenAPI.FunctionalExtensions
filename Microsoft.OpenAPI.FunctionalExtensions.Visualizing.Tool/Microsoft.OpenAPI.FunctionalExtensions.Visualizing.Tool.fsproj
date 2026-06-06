@@ -19,6 +19,8 @@
 
     <ItemGroup>
       <PackageReference Include="Argu" Version="6.2.5" />
+    <PackageReference Include="Microsoft.OpenApi" Version="2.0.0" />
+    <PackageReference Include="Microsoft.OpenApi.YamlReader" Version="2.0.0" />
     </ItemGroup>
 
     <ItemGroup>

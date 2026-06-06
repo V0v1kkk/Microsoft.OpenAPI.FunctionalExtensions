@@ -2,6 +2,10 @@
 open Argu
 open Microsoft.OpenAPI.FunctionalExtensions.OpenApiReaderTools
 open Microsoft.OpenAPI.FunctionalExtensions.Visualizing.GraphvizExport
+open Microsoft.OpenAPI.FunctionalExtensions.OpenApiMerge
+open System.IO
+open Microsoft.OpenApi
+open Microsoft.OpenAPI.FunctionalExtensions.OpenApiScissors
 
 type SchemaArgs =
   | [<Mandatory>] Input of path:string
@@ -36,12 +40,58 @@ with
 type CliArgs =
   | [<CliPrefix(CliPrefix.DoubleDash)>] Schema_Svg of ParseResults<SchemaArgs>
   | [<CliPrefix(CliPrefix.DoubleDash)>] Route_Svg of ParseResults<RouteArgs>
+  | [<CliPrefix(CliPrefix.DoubleDash)>] Merge of ParseResults<MergeArgs>
+  | [<CliPrefix(CliPrefix.DoubleDash)>] Schema_Collect of ParseResults<CollectArgs>
+  | [<CliPrefix(CliPrefix.DoubleDash)>] Route_Collect of ParseResults<CollectArgs>
+  | [<CliPrefix(CliPrefix.DoubleDash)>] Scissors of ParseResults<ScissorsArgs>
 with
   interface IArgParserTemplate with
     member s.Usage =
       match s with
       | Schema_Svg _ -> "Render schema graph to SVG"
       | Route_Svg _ -> "Render route map to SVG"
+      | Merge _ -> "Merge multiple OpenAPI specs into one"
+      | Schema_Collect _ -> "Collect Schema Graph IR as JSON"
+      | Route_Collect _ -> "Collect Route Map IR as JSON"
+      | Scissors _ -> "Cut subset of spec by tags/paths/operations"
+
+and MergeArgs =
+  | Input of path:string
+  | [<Mandatory>] Out of path:string
+with
+  interface IArgParserTemplate with
+    member s.Usage =
+      match s with
+      | Input _ -> "Input spec path (yaml/json). Repeat to add multiple inputs"
+      | Out _ -> "Output spec path (.yaml/.yml or .json)"
+
+and CollectArgs =
+  | [<Mandatory>] Input of path:string
+  | [<Mandatory>] Out of path:string
+with
+  interface IArgParserTemplate with
+    member s.Usage =
+      match s with
+      | Input _ -> "Path to OpenAPI spec (yaml/json)"
+      | Out _ -> "Output JSON path"
+
+and ScissorsArgs =
+  | [<Mandatory>] Input of path:string
+  | [<Mandatory>] Out of path:string
+  | Include_Tag of tag:string
+  | Include_Path of path:string
+  | Include_Operation of opId:string
+  | No_Transitive
+with
+  interface IArgParserTemplate with
+    member s.Usage =
+      match s with
+      | Input _ -> "Input spec path"
+      | Out _ -> "Output spec path"
+      | Include_Tag _ -> "Include operations with this tag (repeatable)"
+      | Include_Path _ -> "Include routes that contain this substring (repeatable)"
+      | Include_Operation _ -> "Include operations by id (repeatable)"
+      | No_Transitive _ -> "Do not include transitive component schemas"
 
 [<EntryPoint>]
 let main argv =
@@ -71,3 +121,106 @@ let main argv =
           exportRouteMapToSvgWith doc outp { CenterLabel = center; IncludeOperations = includeOps; IncludeSchemas = includeSchemas }
           0
       | Error e -> eprintfn "%A" e; 2
+  | Merge mergeArgs ->
+      let inputs = mergeArgs.GetResults(<@ MergeArgs.Input @>)
+      let outp = mergeArgs.GetResult(<@ MergeArgs.Out @>)
+      match mergeFiles (inputs |> List.ofSeq) with
+      | Error e -> eprintfn "%A" e; 2
+      | Ok doc ->
+          // inline save (avoid depending on core writer helpers)
+          let ext = Path.GetExtension(outp).ToLowerInvariant()
+          use sw = new StreamWriter(outp)
+          if ext = ".json" then
+            let w = new OpenApiJsonWriter(sw)
+            doc.SerializeAsV3(w); sw.Flush(); 0
+          else
+            let w = new OpenApiYamlWriter(sw)
+            doc.SerializeAsV3(w); sw.Flush(); 0
+  | Schema_Collect args ->
+      let input = args.GetResult(<@ CollectArgs.Input @>)
+      let outp = args.GetResult(<@ CollectArgs.Out @>)
+      match readSpecification input with
+      | Error e -> eprintfn "%A" e; 2
+      | Ok doc ->
+          let g = Microsoft.OpenAPI.FunctionalExtensions.Visualizing.SchemaGraph.collectDocumentSchemas doc
+          use fs = new FileStream(outp, FileMode.Create, FileAccess.Write, FileShare.None)
+          use jw = new System.Text.Json.Utf8JsonWriter(fs, System.Text.Json.JsonWriterOptions(Indented = true))
+          jw.WriteStartObject()
+          jw.WritePropertyName("nodes"); jw.WriteStartArray()
+          for n in g.Nodes do
+            jw.WriteStartObject()
+            jw.WriteString("id", n.Id)
+            match n.Title with | Some v -> jw.WriteString("title", v) | None -> ()
+            match n.Kind with | Some v -> jw.WriteString("kind", v) | None -> ()
+            match n.Format with | Some v -> jw.WriteString("format", v) | None -> ()
+            match n.ReadOnly with | Some v -> jw.WriteBoolean("readOnly", v) | None -> ()
+            match n.WriteOnly with | Some v -> jw.WriteBoolean("writeOnly", v) | None -> ()
+            match n.EnumValues with
+            | Some vs ->
+                jw.WritePropertyName("enum");
+                jw.WriteStartArray();
+                for v in vs do jw.WriteStringValue(v)
+                jw.WriteEndArray()
+            | None -> ()
+            jw.WriteEndObject()
+          jw.WriteEndArray()
+          jw.WritePropertyName("edges"); jw.WriteStartArray()
+          for e in g.Edges do
+            jw.WriteStartObject()
+            jw.WriteString("from", e.FromId)
+            jw.WriteString("to", e.ToId)
+            match e.EdgeKind with
+            | Microsoft.OpenAPI.FunctionalExtensions.Visualizing.SchemaGraph.Property name -> jw.WriteString("kind", "property"); jw.WriteString("name", name)
+            | Microsoft.OpenAPI.FunctionalExtensions.Visualizing.SchemaGraph.ArrayItem -> jw.WriteString("kind", "arrayItem")
+            | Microsoft.OpenAPI.FunctionalExtensions.Visualizing.SchemaGraph.MapValue -> jw.WriteString("kind", "mapValue")
+            | Microsoft.OpenAPI.FunctionalExtensions.Visualizing.SchemaGraph.Composition ck ->
+                jw.WriteString("kind", "composition");
+                let v = match ck with | Microsoft.OpenAPI.FunctionalExtensions.Visualizing.SchemaGraph.AllOf -> "allOf" | Microsoft.OpenAPI.FunctionalExtensions.Visualizing.SchemaGraph.OneOf -> "oneOf" | Microsoft.OpenAPI.FunctionalExtensions.Visualizing.SchemaGraph.AnyOf -> "anyOf"
+                jw.WriteString("type", v)
+            jw.WriteEndObject()
+          jw.WriteEndArray()
+          jw.WriteEndObject(); jw.Flush(); 0
+  | Route_Collect args ->
+      let input = args.GetResult(<@ CollectArgs.Input @>)
+      let outp = args.GetResult(<@ CollectArgs.Out @>)
+      match readSpecification input with
+      | Error e -> eprintfn "%A" e; 2
+      | Ok doc ->
+          let m = OpenApiOperationsTraversal.collectRouteMap doc
+          use fs = new FileStream(outp, FileMode.Create, FileAccess.Write, FileShare.None)
+          use jw = new System.Text.Json.Utf8JsonWriter(fs, System.Text.Json.JsonWriterOptions(Indented = true))
+          jw.WriteStartObject()
+          jw.WritePropertyName("routes"); jw.WriteStartArray()
+          for r in m.Routes do
+            jw.WriteStartObject()
+            jw.WriteString("path", r.Path)
+            jw.WriteString("method", r.Method)
+            match r.OperationId with | Some v -> jw.WriteString("operationId", v) | None -> ()
+            jw.WritePropertyName("tags");
+            jw.WriteStartArray(); for t in r.Tags do jw.WriteStringValue(t); jw.WriteEndArray()
+            jw.WritePropertyName("parameterSchemas");
+            jw.WriteStartArray(); for s in r.ParameterSchemas do jw.WriteStringValue(s); jw.WriteEndArray()
+            jw.WritePropertyName("requestSchemas");
+            jw.WriteStartArray(); for s in r.RequestSchemas do jw.WriteStringValue(s); jw.WriteEndArray()
+            jw.WritePropertyName("responseSchemas");
+            jw.WriteStartArray(); for s in r.ResponseSchemas do jw.WriteStringValue(s); jw.WriteEndArray()
+            jw.WriteBoolean("returnsArray", r.ReturnsArray)
+            jw.WriteBoolean("returnsArrayViaData", r.ReturnsArrayViaData)
+            jw.WriteEndObject()
+          jw.WriteEndArray(); jw.WriteEndObject(); jw.Flush(); 0
+  | Scissors sargs ->
+      let input = sargs.GetResult(<@ ScissorsArgs.Input @>)
+      let outp = sargs.GetResult(<@ ScissorsArgs.Out @>)
+      let tags = sargs.GetResults(<@ ScissorsArgs.Include_Tag @>) |> List.ofSeq
+      let paths = sargs.GetResults(<@ ScissorsArgs.Include_Path @>) |> List.ofSeq
+      let ops = sargs.GetResults(<@ ScissorsArgs.Include_Operation @>) |> List.ofSeq
+      let trans = not (sargs.Contains(<@ ScissorsArgs.No_Transitive @>))
+      match readSpecification input with
+      | Error e -> eprintfn "%A" e; 2
+      | Ok doc ->
+          let opts: ScissorsOptions = { ScissorsOptions.Empty with IncludeTags = tags; IncludePaths = paths; IncludeOperationIds = ops; Transitive = trans }
+          let cut = cutDocument doc opts
+          let ext = Path.GetExtension(outp).ToLowerInvariant()
+          use sw = new StreamWriter(outp)
+          if ext = ".json" then let w = new OpenApiJsonWriter(sw) in cut.SerializeAsV3(w); sw.Flush(); 0
+          else let w = new OpenApiYamlWriter(sw) in cut.SerializeAsV3(w); sw.Flush(); 0
