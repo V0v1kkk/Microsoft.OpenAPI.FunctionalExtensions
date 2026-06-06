@@ -1,3 +1,4 @@
+/// Example value validation against OpenAPI schemas.
 [<RequireQualifiedAccess>]
 module Microsoft.OpenAPI.FunctionalExtensions.Linting.ExampleValidation
 
@@ -21,7 +22,7 @@ type private JsonValueKind =
     | JsonObject
     | JsonUnknown
 
-let private ruleName = "invalidExamples"
+let private ruleName = "invalid-examples"
 
 let private violation severity message location = {
     Rule = ruleName
@@ -321,6 +322,7 @@ let rec private validateExampleCore
                     @ arrayViolations
                     @ formatViolation
 
+/// Validates a single example value against a schema without document-level reference resolution.
 let validateExample (schema: IOpenApiSchema) (example: JsonNode) (path: string) : LintViolation list =
     validateExampleCore None schema example path Set.empty
 
@@ -406,6 +408,7 @@ let private collectMediaTypeExamples
     |> List.collect (fun (examplePath, example) ->
         validateExampleWithDocument document (schemaSelector mediaType) example $"{basePath}.{examplePath}" location)
 
+/// Validates all inline and named examples across the document against their schemas.
 let invalidExamples (document: OpenApiDocument) : LintViolation list =
     let responseViolations =
         DocumentAdapters.allOperations document
@@ -521,3 +524,6 @@ let invalidExamples (document: OpenApiDocument) : LintViolation list =
             inlineExample @ arrayExamples)
 
     responseViolations @ requestBodyViolations @ parameterViolations @ schemaViolations
+
+/// Named rule: <c>invalid-examples</c>.
+let invalidExamplesRule: NamedRule = { Id = "invalid-examples"; Rule = invalidExamples }

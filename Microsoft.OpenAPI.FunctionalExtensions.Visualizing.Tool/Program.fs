@@ -9,6 +9,7 @@ open System.IO
 open Microsoft.OpenApi
 open Microsoft.OpenAPI.FunctionalExtensions.OpenApiScissors
 open Microsoft.OpenAPI.FunctionalExtensions.OpenApiWriterTools
+open Microsoft.OpenAPI.FunctionalExtensions.Linting
 
 type SchemaArgs =
   | [<Mandatory>] Input of path:string
@@ -40,7 +41,18 @@ with
       | Include_Operations -> "Include per-operation nodes"
       | Include_Schemas -> "Include referenced schema nodes"
 
+type LintArgs =
+  | [<Mandatory>] Input of path:string
+  | Disable_Rule of ruleId:string
+with
+  interface IArgParserTemplate with
+    member s.Usage =
+      match s with
+      | Input _ -> "Path to OpenAPI spec (yaml/json)"
+      | Disable_Rule _ -> "Disable a lint rule by ID (repeatable)"
+
 type CliArgs =
+  | [<CliPrefix(CliPrefix.DoubleDash)>] Lint of ParseResults<LintArgs>
   | [<CliPrefix(CliPrefix.DoubleDash)>] Schema_Svg of ParseResults<SchemaArgs>
   | [<CliPrefix(CliPrefix.DoubleDash)>] Route_Svg of ParseResults<RouteArgs>
   | [<CliPrefix(CliPrefix.DoubleDash)>] Links_Svg of ParseResults<CollectArgs>
@@ -53,6 +65,7 @@ with
   interface IArgParserTemplate with
     member s.Usage =
       match s with
+      | Lint _ -> "Lint an OpenAPI specification"
       | Schema_Svg _ -> "Render schema graph to SVG"
       | Route_Svg _ -> "Render route map to SVG"
       | Links_Svg _ -> "Render links graph to SVG"
@@ -100,11 +113,56 @@ with
       | Include_Operation _ -> "Include operations by id (repeatable)"
       | No_Transitive _ -> "Do not include transitive component schemas"
 
+let private formatSeverity (severity: Types.Severity) =
+  match severity with
+  | Types.Error -> "ERROR"
+  | Types.Warning -> "WARNING"
+  | Types.Info -> "INFO"
+
+let private formatLocation (location: Types.LintLocation) =
+  match location with
+  | Types.DocumentLevel -> "document"
+  | Types.PathLevel path -> $"path:{path}"
+  | Types.OperationLevel (path, method, operationId) ->
+      match operationId with
+      | Some id -> $"operation:{method} {path} ({id})"
+      | None -> $"operation:{method} {path}"
+  | Types.SchemaLevel schemaName -> $"schema:{schemaName}"
+  | Types.SchemaPropertyLevel (schemaName, propertyName) -> $"schema:{schemaName}.{propertyName}"
+  | Types.ParameterLevel (path, method, parameterName) -> $"parameter:{method} {path}/{parameterName}"
+
+let private printViolation (violation: Types.LintViolation) =
+  printfn
+    "[%s] %s: %s (%s)"
+    (formatSeverity violation.Severity)
+    (formatLocation violation.Location)
+    violation.Message
+    violation.Rule
+
 [<EntryPoint>]
 let main argv =
-  let parser = ArgumentParser.Create<CliArgs>(programName = "openapi-visualizer")
+  let parser = ArgumentParser.Create<CliArgs>(programName = "openapi-fx")
   let results = parser.ParseCommandLine argv
   match results.GetSubCommand() with
+  | Lint lintArgs ->
+      let input = lintArgs.GetResult(<@ LintArgs.Input @>)
+      let disabledRules = lintArgs.GetResults(<@ LintArgs.Disable_Rule @>) |> List.ofSeq
+      match readSpecification input with
+      | Error e -> eprintfn "%A" e; 2
+      | Ok doc ->
+          let config =
+            LinterConfig.defaults
+            |> LinterConfig.without disabledRules
+
+          let result = Linter.lintWithConfig config doc
+
+          for violation in result.Violations do
+            printViolation violation
+
+          if result.Violations |> List.exists (fun violation -> violation.Severity = Types.Error) then
+            1
+          else
+            0
   | Schema_Svg schema ->
       let input = schema.GetResult(<@ SchemaArgs.Input @>)
       let outp = schema.GetResult(<@ SchemaArgs.Out @>)

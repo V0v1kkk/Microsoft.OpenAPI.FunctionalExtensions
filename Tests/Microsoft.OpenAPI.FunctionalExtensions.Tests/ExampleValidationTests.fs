@@ -67,7 +67,7 @@ let ``integer example against string schema produces violation`` () =
     let violations = Microsoft.OpenAPI.FunctionalExtensions.Linting.ExampleValidation.validateExample (stringSchema ()) (JsonValue.Create 42) "test"
 
     Assert.That(violations, Is.Not.Empty)
-    Assert.That(violations.Head.Rule, Is.EqualTo "invalidExamples")
+    Assert.That(violations.Head.Rule, Is.EqualTo "invalid-examples")
     Assert.That(violations.Head.Severity, Is.EqualTo Severity.Error)
     Assert.That(violations.Head.Message, Does.Contain "String")
 
@@ -181,7 +181,7 @@ let ``response with example that mismatches schema type produces violation`` () 
     let violations = Microsoft.OpenAPI.FunctionalExtensions.Linting.ExampleValidation.invalidExamples document
 
     Assert.That(violations, Is.Not.Empty)
-    Assert.That(hasRule "invalidExamples" violations, Is.True)
+    Assert.That(hasRule "invalid-examples" violations, Is.True)
 
 let private buildDocumentWithParameterExample (schema: IOpenApiSchema) (example: JsonNode) =
     let parameter = OpenApiParameter()
@@ -267,5 +267,5 @@ let ``examples validation specification contains expected violations`` () =
         let violations = Microsoft.OpenAPI.FunctionalExtensions.Linting.ExampleValidation.invalidExamples document
 
         Assert.That(violations, Is.Not.Empty)
-        Assert.That(hasRule "invalidExamples" violations, Is.True)
+        Assert.That(hasRule "invalid-examples" violations, Is.True)
         Assert.That(messageContains "integer" violations, Is.True)

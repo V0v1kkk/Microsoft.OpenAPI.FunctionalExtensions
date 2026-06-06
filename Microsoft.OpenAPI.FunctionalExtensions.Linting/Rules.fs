@@ -1,3 +1,4 @@
+/// Built-in documentation and structure lint rules for OpenAPI documents.
 [<RequireQualifiedAccess>]
 module Microsoft.OpenAPI.FunctionalExtensions.Linting.Rules
 
@@ -89,6 +90,7 @@ let private referencedSchemaNames (document: OpenApiDocument) : Set<string> =
             |> List.fold (fun state schema -> addSchemaReferences document schema state) accumulated)
         Set.empty
 
+/// Flags operations that do not define a non-empty <c>operationId</c>.
 let missingOperationId (document: OpenApiDocument) : LintViolation list =
     operationContexts document
     |> List.choose (fun (path, method, operation, _) ->
@@ -97,12 +99,13 @@ let missingOperationId (document: OpenApiDocument) : LintViolation list =
         | _ ->
             Some(
                 violation
-                    "missingOperationId"
+                    "missing-operation-id"
                     Error
                     "Operation must have a non-empty operationId."
                     (OperationLevel(path, httpMethodName method, operationIdOption operation))
             ))
 
+/// Flags operations with a missing or blank <c>summary</c>.
 let emptyOperationSummary (document: OpenApiDocument) : LintViolation list =
     operationContexts document
     |> List.choose (fun (path, method, operation, _) ->
@@ -111,12 +114,13 @@ let emptyOperationSummary (document: OpenApiDocument) : LintViolation list =
         | _ ->
             Some(
                 violation
-                    "emptyOperationSummary"
+                    "empty-operation-summary"
                     Warning
                     "Operation should have a non-empty summary."
                     (OperationLevel(path, httpMethodName method, operationIdOption operation))
             ))
 
+/// Flags path and operation parameters without a description.
 let emptyParameterDescription (document: OpenApiDocument) : LintViolation list =
     operationContexts document
     |> List.collect (fun (path, method, operation, pathParameters) ->
@@ -129,12 +133,13 @@ let emptyParameterDescription (document: OpenApiDocument) : LintViolation list =
             | _ ->
                 Some(
                     violation
-                        "emptyParameterDescription"
+                        "empty-parameter-description"
                         Warning
                         $"Parameter '{parameterName parameter}' should have a description."
                         (ParameterLevel(path, methodName, parameterName parameter))
                 )))
 
+/// Flags component schema properties without a description.
 let emptySchemaPropertyDescription (document: OpenApiDocument) : LintViolation list =
     DocumentAdapters.documentSchemas document
     |> Map.toList
@@ -147,12 +152,13 @@ let emptySchemaPropertyDescription (document: OpenApiDocument) : LintViolation l
             | _ ->
                 Some(
                     violation
-                        "emptySchemaPropertyDescription"
+                        "empty-schema-property-description"
                         Warning
                         $"Schema property '{propertyName}' should have a description."
                         (SchemaPropertyLevel(schemaName, propertyName))
                 )))
 
+/// Flags component schemas that are not referenced from any path or operation.
 let unusedSchemas (document: OpenApiDocument) : LintViolation list =
     let referenced = referencedSchemaNames document
 
@@ -164,12 +170,13 @@ let unusedSchemas (document: OpenApiDocument) : LintViolation list =
         else
             Some(
                 violation
-                    "unusedSchemas"
+                    "unused-schemas"
                     Warning
                     $"Component schema '{schemaName}' is not referenced from any path or operation."
                     (SchemaLevel schemaName)
             ))
 
+/// Flags operation responses without a description.
 let missingResponseDescription (document: OpenApiDocument) : LintViolation list =
     operationContexts document
     |> List.collect (fun (path, method, operation, _) ->
@@ -184,12 +191,13 @@ let missingResponseDescription (document: OpenApiDocument) : LintViolation list 
             | _ ->
                 Some(
                     violation
-                        "missingResponseDescription"
+                        "missing-response-description"
                         Error
                         $"Response '{statusCode}' must have a description."
                         (OperationLevel(path, methodName, operationId))
                 )))
 
+/// Flags path items that define no HTTP operations.
 let pathWithoutOperations (document: OpenApiDocument) : LintViolation list =
     DocumentAdapters.documentPaths document
     |> List.choose (fun (path, pathItem) ->
@@ -197,13 +205,14 @@ let pathWithoutOperations (document: OpenApiDocument) : LintViolation list =
         | [] ->
             Some(
                 violation
-                    "pathWithoutOperations"
+                    "path-without-operations"
                     Warning
                     $"Path '{path}' has no operations defined."
                     (PathLevel path)
             )
         | _ -> None)
 
+/// Flags responses that declare <c>content</c> but define no media types.
 let missingContentType (document: OpenApiDocument) : LintViolation list =
     operationContexts document
     |> List.collect (fun (path, method, operation, _) ->
@@ -224,10 +233,47 @@ let missingContentType (document: OpenApiDocument) : LintViolation list =
                     if Map.isEmpty mediaTypes then
                         Some(
                             violation
-                                "missingContentType"
+                                "missing-content-type"
                                 Error
                                 $"Response '{statusCode}' has a content section but no media types."
                                 (OperationLevel(path, methodName, operationId))
                         )
                     else
                         None))
+
+/// Named rule: <c>missing-operation-id</c>.
+let missingOperationIdRule: NamedRule = { Id = "missing-operation-id"; Rule = missingOperationId }
+
+/// Named rule: <c>empty-operation-summary</c>.
+let emptyOperationSummaryRule: NamedRule = { Id = "empty-operation-summary"; Rule = emptyOperationSummary }
+
+/// Named rule: <c>empty-parameter-description</c>.
+let emptyParameterDescriptionRule: NamedRule = { Id = "empty-parameter-description"; Rule = emptyParameterDescription }
+
+/// Named rule: <c>empty-schema-property-description</c>.
+let emptySchemaPropertyDescriptionRule: NamedRule =
+    { Id = "empty-schema-property-description"; Rule = emptySchemaPropertyDescription }
+
+/// Named rule: <c>unused-schemas</c>.
+let unusedSchemasRule: NamedRule = { Id = "unused-schemas"; Rule = unusedSchemas }
+
+/// Named rule: <c>missing-response-description</c>.
+let missingResponseDescriptionRule: NamedRule = { Id = "missing-response-description"; Rule = missingResponseDescription }
+
+/// Named rule: <c>path-without-operations</c>.
+let pathWithoutOperationsRule: NamedRule = { Id = "path-without-operations"; Rule = pathWithoutOperations }
+
+/// Named rule: <c>missing-content-type</c>.
+let missingContentTypeRule: NamedRule = { Id = "missing-content-type"; Rule = missingContentType }
+
+/// All built-in documentation and structure rules as named pairs.
+let defaultNamedRules: NamedRule list = [
+    missingOperationIdRule
+    emptyOperationSummaryRule
+    emptyParameterDescriptionRule
+    emptySchemaPropertyDescriptionRule
+    unusedSchemasRule
+    missingResponseDescriptionRule
+    pathWithoutOperationsRule
+    missingContentTypeRule
+]

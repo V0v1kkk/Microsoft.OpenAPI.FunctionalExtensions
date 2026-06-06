@@ -10,6 +10,7 @@
         <Compile Include="Types.fs" />
         <Compile Include="Rules.fs" />
         <Compile Include="ExampleValidation.fs" />
+        <Compile Include="LinterConfig.fs" />
         <Compile Include="Linter.fs" />
     </ItemGroup>
 

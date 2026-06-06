@@ -7,6 +7,7 @@ open Microsoft.OpenAPI.FunctionalExtensions
 open NUnit.Framework
 open Microsoft.OpenApi
 open Microsoft.OpenAPI.FunctionalExtensions.OpenApiReaderTools
+open Microsoft.OpenAPI.FunctionalExtensions.Linting
 open Microsoft.OpenAPI.FunctionalExtensions.Linting.Types
 
 let private hasRule (ruleName: string) (violations: LintViolation list) =
@@ -126,11 +127,11 @@ let ``petstore specification has lint violations`` () =
     match readSpecification "Specifications/petstore.yaml" with
     | Result.Error error -> Assert.Fail($"Failed to read petstore: %A{error}")
     | Result.Ok document ->
-        let result = Microsoft.OpenAPI.FunctionalExtensions.Linting.Linter.lintWithDefaults document
+        let result = Linter.lintWithDefaults document
         Assert.That(result.Violations, Is.Not.Empty)
 
         Assert.That(
-            hasRule "emptySchemaPropertyDescription" result.Violations,
+            hasRule "empty-schema-property-description" result.Violations,
             Is.True,
             "Expected missing schema property descriptions in petstore"
         )
@@ -143,7 +144,7 @@ let ``missingOperationId catches operations without id`` () =
     let violations = Microsoft.OpenAPI.FunctionalExtensions.Linting.Rules.missingOperationId document
 
     Assert.That(violations, Has.Length.EqualTo 1)
-    Assert.That(violations.Head.Rule, Is.EqualTo "missingOperationId")
+    Assert.That(violations.Head.Rule, Is.EqualTo "missing-operation-id")
     Assert.That(violations.Head.Severity, Is.EqualTo Severity.Error)
 
 [<Test>]
@@ -154,7 +155,7 @@ let ``emptyOperationSummary catches empty summaries`` () =
     let violations = Microsoft.OpenAPI.FunctionalExtensions.Linting.Rules.emptyOperationSummary document
 
     Assert.That(violations, Has.Length.EqualTo 1)
-    Assert.That(violations.Head.Rule, Is.EqualTo "emptyOperationSummary")
+    Assert.That(violations.Head.Rule, Is.EqualTo "empty-operation-summary")
     Assert.That(violations.Head.Severity, Is.EqualTo Severity.Warning)
 
 [<Test>]
@@ -168,7 +169,7 @@ let ``unusedSchemas detects unreferenced component schemas`` () =
     let violations = Microsoft.OpenAPI.FunctionalExtensions.Linting.Rules.unusedSchemas document
 
     Assert.That(violations, Has.Length.EqualTo 1)
-    Assert.That(violations.Head.Rule, Is.EqualTo "unusedSchemas")
+    Assert.That(violations.Head.Rule, Is.EqualTo "unused-schemas")
 
     match violations.Head.Location with
     | SchemaLevel schemaName -> Assert.That(schemaName, Is.EqualTo "Unused")
@@ -195,7 +196,7 @@ let ``lintWithDefaults returns non-empty result for typical specification`` () =
     match readSpecification "Specifications/petstore.yaml" with
     | Result.Error error -> Assert.Fail($"Failed to read petstore: %A{error}")
     | Result.Ok document ->
-        let result = Microsoft.OpenAPI.FunctionalExtensions.Linting.Linter.lintWithDefaults document
+        let result = Linter.lintWithDefaults document
         Assert.That(result.Violations, Is.Not.Empty)
         Assert.That(result.Violations.Length, Is.GreaterThan(3))
 
@@ -205,7 +206,7 @@ let ``custom rule list applies only selected rules`` () =
         buildDocumentWithOperation None None (Some "Item id") None [ "Item"; "Unused" ] (Some "Item")
 
     let result =
-        Microsoft.OpenAPI.FunctionalExtensions.Linting.Linter.lint
+        Linter.lint
             [
                 Microsoft.OpenAPI.FunctionalExtensions.Linting.Rules.missingOperationId
                 Microsoft.OpenAPI.FunctionalExtensions.Linting.Rules.unusedSchemas
@@ -213,7 +214,79 @@ let ``custom rule list applies only selected rules`` () =
             document
 
     Assert.That(result.Violations, Has.Length.EqualTo 2)
-    Assert.That(hasRule "missingOperationId" result.Violations, Is.True)
-    Assert.That(hasRule "unusedSchemas" result.Violations, Is.True)
-    Assert.That(hasRule "emptyOperationSummary" result.Violations, Is.False)
-    Assert.That(hasRule "emptyParameterDescription" result.Violations, Is.False)
+    Assert.That(hasRule "missing-operation-id" result.Violations, Is.True)
+    Assert.That(hasRule "unused-schemas" result.Violations, Is.True)
+    Assert.That(hasRule "empty-operation-summary" result.Violations, Is.False)
+    Assert.That(hasRule "empty-parameter-description" result.Violations, Is.False)
+
+[<Test>]
+let ``LinterConfig without disabled rules skips them`` () =
+    let document =
+        buildDocumentWithOperation (Some "listItems") None (Some "Item id") (Some "OK") [ "Item" ] (Some "Item")
+
+    let enabled =
+        Linter.lintWithConfig
+            (LinterConfig.defaults |> LinterConfig.withOnly [ "empty-operation-summary" ])
+            document
+
+    let disabled =
+        Linter.lintWithConfig
+            (LinterConfig.defaults
+             |> LinterConfig.withOnly [ "empty-operation-summary" ]
+             |> LinterConfig.without [ "empty-operation-summary" ])
+            document
+
+    Assert.That(hasRule "empty-operation-summary" enabled.Violations, Is.True)
+    Assert.That(disabled.Violations, Is.Empty)
+
+[<Test>]
+let ``LinterConfig withOnly runs only selected rules`` () =
+    let document =
+        buildDocumentWithOperation None None (Some "Item id") None [ "Item"; "Unused" ] (Some "Item")
+
+    let result =
+        Linter.lintWithConfig
+            (LinterConfig.defaults |> LinterConfig.withOnly [ "missing-operation-id" ])
+            document
+
+    Assert.That(result.Violations, Has.Length.EqualTo 1)
+    Assert.That(hasRule "missing-operation-id" result.Violations, Is.True)
+    Assert.That(hasRule "unused-schemas" result.Violations, Is.False)
+    Assert.That(hasRule "empty-operation-summary" result.Violations, Is.False)
+
+[<Test>]
+let ``LinterConfig withCustom executes custom rule`` () =
+    let document = buildCleanDocument ()
+    document.Info <- OpenApiInfo()
+
+    let customRule (doc: OpenApiDocument) : LintViolation list =
+        match doc.Info with
+        | null -> []
+        | info when String.IsNullOrWhiteSpace info.Title ->
+            [ {
+                Rule = "require-api-title"
+                Severity = Error
+                Message = "API title must be set."
+                Location = DocumentLevel
+              } ]
+        | _ -> []
+
+    let result =
+        Linter.lintWithConfig (LinterConfig.defaults |> LinterConfig.withCustom [ customRule ]) document
+
+    Assert.That(hasRule "require-api-title" result.Violations, Is.True)
+
+[<Test>]
+let ``LinterConfig withSeverity overrides rule severity`` () =
+    let document =
+        buildDocumentWithOperation (Some "listItems") None (Some "Item id") (Some "OK") [ "Item" ] (Some "Item")
+
+    let result =
+        Linter.lintWithConfig
+            (LinterConfig.defaults
+             |> LinterConfig.withOnly [ "empty-operation-summary" ]
+             |> LinterConfig.withSeverity "empty-operation-summary" Info)
+            document
+
+    Assert.That(result.Violations, Has.Length.EqualTo 1)
+    Assert.That(result.Violations.Head.Severity, Is.EqualTo Info)

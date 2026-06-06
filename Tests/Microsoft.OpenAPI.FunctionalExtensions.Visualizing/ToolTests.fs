@@ -79,6 +79,25 @@ let requireGraphvizForSvgTests () =
         Assume.That(isGraphvizAvailable (), Is.True, "Graphviz (dot) is not available on PATH")
 
 [<Test>]
+let ``lint petstore reports violations`` () =
+    let inputSpec = Path.Combine(repoRoot, "Samples", "petstore.yaml")
+    let code, stdout, err = runTool ($"--lint --input {inputSpec}")
+    TestContext.WriteLine(stdout)
+    TestContext.WriteLine(err)
+    Assert.That(code, Is.EqualTo(0), "Lint should exit 0 when only warnings/info, or 1 for errors")
+    Assert.That(stdout.Contains("empty-schema-property-description"), Is.True, "Expected lint output to mention a rule id")
+
+[<Test>]
+let ``lint with disabled rule omits that rule from output`` () =
+    let inputSpec = Path.Combine(repoRoot, "Samples", "petstore.yaml")
+    let code, stdout, err =
+        runTool ($"--lint --input {inputSpec} --disable-rule empty-schema-property-description")
+    TestContext.WriteLine(stdout)
+    TestContext.WriteLine(err)
+    Assert.That(code, Is.EqualTo(0).Or.EqualTo(1), err)
+    Assert.That(stdout.Contains("empty-schema-property-description"), Is.False)
+
+[<Test>]
 let ``schema svg from petstore`` () =
     let outDir = Path.Combine(repoRoot, "out")
     Directory.CreateDirectory(outDir) |> ignore

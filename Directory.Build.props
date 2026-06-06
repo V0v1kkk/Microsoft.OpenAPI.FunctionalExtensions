@@ -1,0 +1,11 @@
+<Project>
+  <PropertyGroup>
+    <VersionPrefix>0.2.0</VersionPrefix>
+    <VersionSuffix>alpha</VersionSuffix>
+    <Authors>Vladimir</Authors>
+    <Copyright>Copyright (c) 2026 Vladimir Rogozhin</Copyright>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/user/Microsoft.OpenAPI.FunctionalExtensions</PackageProjectUrl>
+    <RepositoryType>git</RepositoryType>
+  </PropertyGroup>
+</Project>

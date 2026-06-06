@@ -7,11 +7,8 @@
 
     <PropertyGroup>
         <PackageId>Functional.Microsoft.OpenAPI.Extensions.Visualizing</PackageId>
-        <Version>0.2.0-alpha</Version>
-        <Authors>Vladimir</Authors>
         <Description>Graphviz DOT/SVG visualization for OpenAPI schema graphs and route maps. Uses Functional.Microsoft.OpenAPI.Extensions core library.</Description>
         <PackageTags>openapi;fsharp;graphviz;visualization;dot;svg</PackageTags>
-        <PackageLicenseExpression>MIT</PackageLicenseExpression>
     </PropertyGroup>
 
     <ItemGroup>

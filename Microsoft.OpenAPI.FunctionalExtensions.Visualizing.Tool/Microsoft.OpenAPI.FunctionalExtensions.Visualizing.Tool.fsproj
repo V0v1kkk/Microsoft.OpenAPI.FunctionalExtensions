@@ -5,12 +5,9 @@
         <TargetFramework>net9.0</TargetFramework>
         <PackAsTool>true</PackAsTool>
         <PackageId>Functional.Microsoft.OpenAPI.Extensions.Tool</PackageId>
-        <Version>0.2.0-alpha</Version>
         <ToolCommandName>openapi-fx</ToolCommandName>
-        <Authors>Vladimir</Authors>
-        <Description>CLI tool for OpenAPI schema visualization, merge, and scissors operations.</Description>
-        <PackageTags>openapi;fsharp;cli;visualization;merge</PackageTags>
-        <PackageLicenseExpression>MIT</PackageLicenseExpression>
+        <Description>CLI tool for OpenAPI schema visualization, merge, scissors, and linting.</Description>
+        <PackageTags>openapi;fsharp;cli;visualization;merge;lint</PackageTags>
         <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
     </PropertyGroup>
 
@@ -31,6 +28,7 @@
 
     <ItemGroup>
       <ProjectReference Include="..\Microsoft.OpenAPI.FunctionalExtensions.Visualizing\Microsoft.OpenAPI.FunctionalExtensions.Visualizing.fsproj" />
+      <ProjectReference Include="..\Microsoft.OpenAPI.FunctionalExtensions.Linting\Microsoft.OpenAPI.FunctionalExtensions.Linting.fsproj" />
     </ItemGroup>
 
 </Project>
