@@ -4,6 +4,7 @@ module Microsoft.OpenAPI.FunctionalExtensions.Linting.Rules
 
 open System
 open System.Net.Http
+open System.Text.RegularExpressions
 open Microsoft.OpenApi
 open Microsoft.OpenAPI.FunctionalExtensions
 open Microsoft.OpenAPI.FunctionalExtensions.Linting.Types
@@ -21,6 +22,18 @@ let private parameterName (parameter: IOpenApiParameter) =
     AdapterCore.ofObj parameter.Name |> Option.defaultValue "<unnamed>"
 
 let private parameterDescription (parameter: IOpenApiParameter) = AdapterCore.ofObj parameter.Description
+
+let private parameterIn (parameter: IOpenApiParameter) = parameter.In
+
+let private pathTemplateParameters (path: string) =
+    Regex.Matches(path, @"\{([^}]+)\}")
+    |> Seq.map (fun match' -> match'.Groups.[1].Value)
+    |> Seq.toList
+
+let private pathLevelParameters (parameters: IOpenApiParameter list) =
+    parameters
+    |> List.filter (fun parameter -> parameterIn parameter = ParameterLocation.Path)
+    |> List.map parameterName
 
 let private responseDescription (response: IOpenApiResponse) = AdapterCore.ofObj response.Description
 
@@ -241,6 +254,84 @@ let missingContentType (document: OpenApiDocument) : LintViolation list =
                     else
                         None))
 
+/// Flags duplicate <c>operationId</c> values across the document.
+let duplicateOperationId (document: OpenApiDocument) : LintViolation list =
+    operationContexts document
+    |> List.choose (fun (path, method, operation, _) ->
+        operationIdOption operation
+        |> Option.filter (fun operationId -> not (String.IsNullOrWhiteSpace operationId))
+        |> Option.map (fun operationId -> operationId, path, httpMethodName method))
+    |> List.groupBy (fun (operationId, _, _) -> operationId)
+    |> List.collect (fun (operationId, occurrences) ->
+        match occurrences with
+        | [ _ ] -> []
+        | _ ->
+            occurrences
+            |> List.map (fun (_, path, method) ->
+                violation
+                    "duplicate-operation-id"
+                    Error
+                    $"Duplicate operationId '{operationId}'."
+                    (OperationLevel(path, method, Some operationId))))
+
+/// Flags path template parameters that are not declared as <c>in: path</c> parameters.
+let pathParameterNotDefined (document: OpenApiDocument) : LintViolation list =
+    operationContexts document
+    |> List.collect (fun (path, method, operation, pathParameters) ->
+        let declared =
+            pathLevelParameters (pathParameters @ OperationAdapters.operationParameters operation)
+            |> Set.ofList
+
+        pathTemplateParameters path
+        |> List.choose (fun templateParameter ->
+            if Set.contains templateParameter declared then
+                None
+            else
+                Some(
+                    violation
+                        "path-parameter-not-defined"
+                        Error
+                        $"Path parameter '{{{templateParameter}}}' is not defined on path or operation."
+                        (OperationLevel(path, httpMethodName method, operationIdOption operation))
+                )))
+
+/// Flags operations that define no responses.
+let operationWithoutResponses (document: OpenApiDocument) : LintViolation list =
+    operationContexts document
+    |> List.choose (fun (path, method, operation, _) ->
+        let responses = OperationAdapters.operationResponses operation
+
+        if Map.isEmpty responses then
+            Some(
+                violation
+                    "operation-without-responses"
+                    Error
+                    "Operation must define at least one response."
+                    (OperationLevel(path, httpMethodName method, operationIdOption operation))
+            )
+        else
+            None)
+
+/// Flags duplicate <c>in: path</c> parameter names on the same path item or operation.
+let duplicatePathParameter (document: OpenApiDocument) : LintViolation list =
+    operationContexts document
+    |> List.collect (fun (path, method, operation, pathParameters) ->
+        let methodName = httpMethodName method
+        let operationId = operationIdOption operation
+
+        (pathParameters @ OperationAdapters.operationParameters operation)
+        |> List.filter (fun parameter -> parameterIn parameter = ParameterLocation.Path)
+        |> List.groupBy parameterName
+        |> List.collect (fun (parameterName, duplicates) ->
+            match duplicates with
+            | [ _ ] -> []
+            | _ ->
+                [ violation
+                      "duplicate-path-parameter"
+                      Error
+                      $"Path parameter '{parameterName}' is declared more than once."
+                      (ParameterLevel(path, methodName, parameterName)) ]))
+
 /// Named rule: <c>missing-operation-id</c>.
 let missingOperationIdRule: NamedRule = { Id = "missing-operation-id"; Rule = missingOperationId }
 
@@ -266,9 +357,25 @@ let pathWithoutOperationsRule: NamedRule = { Id = "path-without-operations"; Rul
 /// Named rule: <c>missing-content-type</c>.
 let missingContentTypeRule: NamedRule = { Id = "missing-content-type"; Rule = missingContentType }
 
+/// Named rule: <c>duplicate-operation-id</c>.
+let duplicateOperationIdRule: NamedRule = { Id = "duplicate-operation-id"; Rule = duplicateOperationId }
+
+/// Named rule: <c>path-parameter-not-defined</c>.
+let pathParameterNotDefinedRule: NamedRule = { Id = "path-parameter-not-defined"; Rule = pathParameterNotDefined }
+
+/// Named rule: <c>operation-without-responses</c>.
+let operationWithoutResponsesRule: NamedRule = { Id = "operation-without-responses"; Rule = operationWithoutResponses }
+
+/// Named rule: <c>duplicate-path-parameter</c>.
+let duplicatePathParameterRule: NamedRule = { Id = "duplicate-path-parameter"; Rule = duplicatePathParameter }
+
 /// All built-in documentation and structure rules as named pairs.
 let defaultNamedRules: NamedRule list = [
     missingOperationIdRule
+    duplicateOperationIdRule
+    pathParameterNotDefinedRule
+    operationWithoutResponsesRule
+    duplicatePathParameterRule
     emptyOperationSummaryRule
     emptyParameterDescriptionRule
     emptySchemaPropertyDescriptionRule

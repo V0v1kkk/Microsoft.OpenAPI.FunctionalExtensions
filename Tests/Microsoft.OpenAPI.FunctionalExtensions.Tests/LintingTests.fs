@@ -276,6 +276,146 @@ let ``LinterConfig withCustom executes custom rule`` () =
 
     Assert.That(hasRule "require-api-title" result.Violations, Is.True)
 
+let private buildDocumentWithDuplicateOperationIds () =
+    let makeOperation operationId summary =
+        let response = OpenApiResponse()
+        response.Description <- "OK"
+
+        let responses = OpenApiResponses()
+        responses.Add("200", response) |> ignore
+
+        let operation = OpenApiOperation()
+        operation.OperationId <- operationId
+        operation.Summary <- summary
+        operation.Responses <- responses
+        operation
+
+    let pathItem = OpenApiPathItem()
+    pathItem.Operations <- Dictionary<HttpMethod, OpenApiOperation>()
+    pathItem.Operations.Add(HttpMethod.Get, makeOperation "sharedId" "First") |> ignore
+    pathItem.Operations.Add(HttpMethod.Post, makeOperation "sharedId" "Second") |> ignore
+
+    let paths = OpenApiPaths()
+    paths.Add("/alpha", pathItem) |> ignore
+
+    let document = OpenApiDocument()
+    document.Paths <- paths
+    document
+
+let private buildDocumentWithMissingPathParameter () =
+    let response = OpenApiResponse()
+    response.Description <- "OK"
+
+    let responses = OpenApiResponses()
+    responses.Add("200", response) |> ignore
+
+    let operation = OpenApiOperation()
+    operation.OperationId <- "getItem"
+    operation.Summary <- "Get item"
+    operation.Responses <- responses
+
+    let pathItem = OpenApiPathItem()
+    pathItem.Operations <- Dictionary<HttpMethod, OpenApiOperation>()
+    pathItem.Operations.Add(HttpMethod.Get, operation) |> ignore
+
+    let paths = OpenApiPaths()
+    paths.Add("/items/{itemId}", pathItem) |> ignore
+
+    let document = OpenApiDocument()
+    document.Paths <- paths
+    document
+
+let private buildDocumentWithoutResponses () =
+    let operation = OpenApiOperation()
+    operation.OperationId <- "noResponses"
+    operation.Summary <- "No responses"
+
+    let pathItem = OpenApiPathItem()
+    pathItem.Operations <- Dictionary<HttpMethod, OpenApiOperation>()
+    pathItem.Operations.Add(HttpMethod.Get, operation) |> ignore
+
+    let paths = OpenApiPaths()
+    paths.Add("/empty", pathItem) |> ignore
+
+    let document = OpenApiDocument()
+    document.Paths <- paths
+    document
+
+let private buildDocumentWithDuplicatePathParameters () =
+    let duplicate = OpenApiParameter()
+    duplicate.Name <- "itemId"
+    duplicate.In <- ParameterLocation.Path
+    duplicate.Description <- "First declaration"
+
+    let duplicateAgain = OpenApiParameter()
+    duplicateAgain.Name <- "itemId"
+    duplicateAgain.In <- ParameterLocation.Path
+    duplicateAgain.Description <- "Second declaration"
+
+    let response = OpenApiResponse()
+    response.Description <- "OK"
+
+    let responses = OpenApiResponses()
+    responses.Add("200", response) |> ignore
+
+    let operation = OpenApiOperation()
+    operation.OperationId <- "getItem"
+    operation.Summary <- "Get item"
+    operation.Parameters <-
+        List<IOpenApiParameter>([ duplicateAgain :> IOpenApiParameter ]) :> IList<IOpenApiParameter>
+    operation.Responses <- responses
+
+    let pathItem = OpenApiPathItem()
+    pathItem.Parameters <- List<IOpenApiParameter>([ duplicate :> IOpenApiParameter ]) :> IList<IOpenApiParameter>
+    pathItem.Operations <- Dictionary<HttpMethod, OpenApiOperation>()
+    pathItem.Operations.Add(HttpMethod.Get, operation) |> ignore
+
+    let paths = OpenApiPaths()
+    paths.Add("/items/{itemId}", pathItem) |> ignore
+
+    let document = OpenApiDocument()
+    document.Paths <- paths
+    document
+
+[<Test>]
+let ``duplicateOperationId reports each duplicate occurrence`` () =
+    let document = buildDocumentWithDuplicateOperationIds ()
+    let violations = Microsoft.OpenAPI.FunctionalExtensions.Linting.Rules.duplicateOperationId document
+
+    Assert.That(violations, Has.Length.EqualTo 2)
+    Assert.That(violations |> List.forall (fun violation -> violation.Rule = "duplicate-operation-id"), Is.True)
+    Assert.That(violations |> List.forall (fun violation -> violation.Severity = Error), Is.True)
+
+[<Test>]
+let ``pathParameterNotDefined catches missing path parameter declaration`` () =
+    let document = buildDocumentWithMissingPathParameter ()
+    let violations = Microsoft.OpenAPI.FunctionalExtensions.Linting.Rules.pathParameterNotDefined document
+
+    Assert.That(violations, Has.Length.EqualTo 1)
+    Assert.That(violations.Head.Rule, Is.EqualTo "path-parameter-not-defined")
+    Assert.That(violations.Head.Message, Does.Contain("itemId"))
+
+[<Test>]
+let ``operationWithoutResponses catches operations with no responses`` () =
+    let document = buildDocumentWithoutResponses ()
+    let violations = Microsoft.OpenAPI.FunctionalExtensions.Linting.Rules.operationWithoutResponses document
+
+    Assert.That(violations, Has.Length.EqualTo 1)
+    Assert.That(violations.Head.Rule, Is.EqualTo "operation-without-responses")
+    Assert.That(violations.Head.Severity, Is.EqualTo Error)
+
+[<Test>]
+let ``duplicatePathParameter catches repeated path parameter names`` () =
+    let document = buildDocumentWithDuplicatePathParameters ()
+    let violations = Microsoft.OpenAPI.FunctionalExtensions.Linting.Rules.duplicatePathParameter document
+
+    Assert.That(violations, Has.Length.EqualTo 1)
+    Assert.That(violations.Head.Rule, Is.EqualTo "duplicate-path-parameter")
+
+    match violations.Head.Location with
+    | ParameterLevel(_, _, parameterName) -> Assert.That(parameterName, Is.EqualTo "itemId")
+    | _ -> Assert.Fail("Expected parameter-level location")
+
 [<Test>]
 let ``LinterConfig withSeverity overrides rule severity`` () =
     let document =
