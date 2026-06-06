@@ -30,6 +30,7 @@
         <Compile Include="DocumentAdaptersTests.fs" />
         <Compile Include="LintingTests.fs" />
         <Compile Include="ExampleValidationTests.fs" />
+        <Compile Include="ExampleValidationPropertyTests.fs" />
         <Compile Include="ScissorsTests.fs" />
         <Compile Include="MergeSpecsTests.fs" />
         <Compile Include="AdaptersTests.fs" />
