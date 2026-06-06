@@ -3,8 +3,7 @@ module OpenApiTraversal
 open System
 open System.Collections.Generic
 open Microsoft.OpenApi
-open Microsoft.OpenAPI.FunctionalExtensions.OpenApiAdapters
-open OpenApiSchemaAnalysis
+open Microsoft.OpenAPI.FunctionalExtensions.ActivePatterns
 
 type CompositionKind =
   | AllOf
@@ -44,28 +43,30 @@ type SchemaGraph = {
 
 let private nodeId (rootPointer: string) (schema: IOpenApiSchema) : SchemaNodeRef =
   // Prefer component pointer when schema is a reference or named component; fall back to traversal path
-  match trySchemaRefName schema with
-  | Some id when not (String.IsNullOrWhiteSpace id) -> $"#/components/schemas/{id}"
-  | None when not (String.IsNullOrWhiteSpace schema.Id) -> $"#/components/schemas/{schema.Id}"
+  match Microsoft.OpenAPI.FunctionalExtensions.ReferenceAdapters.trySchemaReferenceId schema with
+  | Some id when not (String.IsNullOrWhiteSpace id) ->
+      Microsoft.OpenAPI.FunctionalExtensions.ReferenceAdapters.referencePointer id
   | _ -> rootPointer
 
 let private addNode (graph: SchemaGraph) (id: SchemaNodeRef) (schema: IOpenApiSchema) =
+  let enumValues =
+    match Microsoft.OpenAPI.FunctionalExtensions.SchemaAdapters.schemaEnum schema with
+    | [] -> None
+    | nodes ->
+        Some (nodes |> List.map (fun node -> node.ToJsonString()))
+
   graph.Nodes.Add {
     Id = id
-    Title = if System.String.IsNullOrWhiteSpace schema.Title then None else Some schema.Title
-    Kind = schema.Type |> Option.ofNullable |> Option.map string
+    Title = Microsoft.OpenAPI.FunctionalExtensions.SchemaAdapters.schemaTitle schema
+    Kind =
+      Microsoft.OpenAPI.FunctionalExtensions.SchemaAdapters.schemaType schema
+      |> Option.map string
     Nullable = None // v2 uses JsonSchemaType flags including Null; compute later in label
-    Description = schema.Description |> Option.ofObj
-    Format = schema.Format |> Option.ofObj
-    ReadOnly = Some schema.ReadOnly
-    EnumValues =
-      if isNull schema.Enum || schema.Enum.Count = 0 then None
-      else
-        Some (
-          schema.Enum
-          |> Seq.choose (fun n -> if isNull n then None else Some (n.ToJsonString()))
-          |> Seq.toList)
-    WriteOnly = Some schema.WriteOnly
+    Description = Microsoft.OpenAPI.FunctionalExtensions.SchemaAdapters.schemaDescription schema
+    Format = Microsoft.OpenAPI.FunctionalExtensions.SchemaAdapters.schemaFormat schema
+    ReadOnly = Some (Microsoft.OpenAPI.FunctionalExtensions.SchemaAdapters.schemaReadOnly schema)
+    EnumValues = enumValues
+    WriteOnly = Some (Microsoft.OpenAPI.FunctionalExtensions.SchemaAdapters.schemaWriteOnly schema)
   }
 
 let private addEdge (graph: SchemaGraph) fromId toId kind =
@@ -82,32 +83,33 @@ let collectSchemaGraphWithRoot (root: IOpenApiSchema) (rootPointer: string) : Sc
     | Some f, Some k -> addEdge graph f id k
     | _ -> ()
 
-    // properties
-    if schema.Properties <> null then
-      for kv in schema.Properties do
-        walk ($"{path}/properties/{kv.Key}") kv.Value (Some id) (Some (Property kv.Key))
+    Microsoft.OpenAPI.FunctionalExtensions.SchemaAdapters.schemaProperties schema
+    |> Map.iter (fun key value ->
+        walk ($"{path}/properties/{key}") value (Some id) (Some (Property key)))
 
     // items — when array of a referenced component, use the component pointer for the child, not '/items'
-    if schema.Items <> null then
-      let childPath =
-        match trySchemaRefName schema.Items with
-        | Some rid when not (String.IsNullOrWhiteSpace rid) -> $"#/components/schemas/{rid}"
-        | _ -> $"{path}/items"
-      walk childPath schema.Items (Some id) (Some ArrayItem)
+    match schema with
+    | ArraySchema items ->
+        let childPath =
+          match Microsoft.OpenAPI.FunctionalExtensions.ReferenceAdapters.trySchemaReferenceId items with
+          | Some rid when not (String.IsNullOrWhiteSpace rid) ->
+              Microsoft.OpenAPI.FunctionalExtensions.ReferenceAdapters.referencePointer rid
+          | _ -> $"{path}/items"
+        walk childPath items (Some id) (Some ArrayItem)
+    | _ -> ()
 
-    // additionalProperties (map)
-    if schema.AdditionalProperties <> null then
-      walk ($"{path}/additionalProperties") schema.AdditionalProperties (Some id) (Some MapValue)
+    match Microsoft.OpenAPI.FunctionalExtensions.SchemaAdapters.schemaAdditionalProperties schema with
+    | Some additionalProperties ->
+        walk ($"{path}/additionalProperties") additionalProperties (Some id) (Some MapValue)
+    | None -> ()
 
-    // compositions
-    let inline each (kind: CompositionKind) (schemas: System.Collections.Generic.IList<IOpenApiSchema>) (seg: string) =
-      if not (isNull schemas) then
-        for s in schemas do
-          walk ($"{path}/{seg}") s (Some id) (Some (Composition kind))
+    let inline each (kind: CompositionKind) (schemas: IOpenApiSchema list) (seg: string) =
+      for s in schemas do
+        walk ($"{path}/{seg}") s (Some id) (Some (Composition kind))
 
-    each AllOf schema.AllOf "allOf"
-    each OneOf schema.OneOf "oneOf"
-    each AnyOf schema.AnyOf "anyOf"
+    each AllOf (Microsoft.OpenAPI.FunctionalExtensions.SchemaAdapters.schemaAllOf schema) "allOf"
+    each OneOf (Microsoft.OpenAPI.FunctionalExtensions.SchemaAdapters.schemaOneOf schema) "oneOf"
+    each AnyOf (Microsoft.OpenAPI.FunctionalExtensions.SchemaAdapters.schemaAnyOf schema) "anyOf"
 
   walk rootPointer root None None
   graph
@@ -117,11 +119,11 @@ let collectSchemaGraph (root: IOpenApiSchema) : SchemaGraph =
 
 let collectDocumentSchemas (doc: OpenApiDocument) : SchemaGraph =
   let graph = { Nodes = ResizeArray(); Edges = ResizeArray() }
-  if doc.Components <> null && doc.Components.Schemas <> null then
-    for kv in doc.Components.Schemas do
-      let sub = collectSchemaGraphWithRoot kv.Value ($"#/components/schemas/{kv.Key}")
+
+  Microsoft.OpenAPI.FunctionalExtensions.DocumentAdapters.documentSchemas doc
+  |> Map.iter (fun key schema ->
+      let sub = collectSchemaGraphWithRoot schema ($"#/components/schemas/{key}")
       sub.Nodes |> Seq.iter graph.Nodes.Add
-      sub.Edges |> Seq.iter graph.Edges.Add
+      sub.Edges |> Seq.iter graph.Edges.Add)
+
   graph
-
-
