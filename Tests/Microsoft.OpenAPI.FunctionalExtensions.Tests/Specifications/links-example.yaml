@@ -1,0 +1,95 @@
+openapi: 3.0.3
+info:
+  title: Links Example API
+  version: 1.0.0
+paths:
+  /users:
+    get:
+      operationId: listUsers
+      summary: List all users (no links)
+      responses:
+        '200':
+          description: User list
+    post:
+      operationId: createUser
+      summary: Create a user
+      responses:
+        '201':
+          description: Created
+          headers:
+            Location:
+              schema:
+                type: string
+          links:
+            GetCreatedUser:
+              operationId: getUser
+              parameters:
+                userId: '$response.header.Location'
+              description: Follow Location header to fetch the created user
+  /users/{userId}:
+    get:
+      operationId: getUser
+      summary: Get user by id
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: User details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+          links:
+            GetUserOrders:
+              operationId: getUserOrders
+              parameters:
+                userId: '$response.body#/id'
+              description: Fetch orders for this user
+  /users/{userId}/orders:
+    get:
+      operationId: getUserOrders
+      summary: List orders for a user
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Order list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    orderId:
+                      type: string
+          links:
+            GetFirstOrder:
+              operationId: getOrder
+              parameters:
+                orderId: '$response.body#/0/orderId'
+              description: Open the first order from the list
+  /orders/{orderId}:
+    get:
+      operationId: getOrder
+      summary: Get order by id
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Order details

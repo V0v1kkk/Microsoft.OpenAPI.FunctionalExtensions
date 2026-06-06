@@ -3,6 +3,7 @@ open Argu
 open Microsoft.OpenAPI.FunctionalExtensions.OpenApiReaderTools
 open Microsoft.OpenAPI.FunctionalExtensions.Visualizing.GraphvizExport
 open OpenApiTraversal
+open OpenApiLinksTraversal
 open Microsoft.OpenAPI.FunctionalExtensions.OpenApiMerge
 open System.IO
 open Microsoft.OpenApi
@@ -42,9 +43,11 @@ with
 type CliArgs =
   | [<CliPrefix(CliPrefix.DoubleDash)>] Schema_Svg of ParseResults<SchemaArgs>
   | [<CliPrefix(CliPrefix.DoubleDash)>] Route_Svg of ParseResults<RouteArgs>
+  | [<CliPrefix(CliPrefix.DoubleDash)>] Links_Svg of ParseResults<CollectArgs>
   | [<CliPrefix(CliPrefix.DoubleDash)>] Merge of ParseResults<MergeArgs>
   | [<CliPrefix(CliPrefix.DoubleDash)>] Schema_Collect of ParseResults<CollectArgs>
   | [<CliPrefix(CliPrefix.DoubleDash)>] Route_Collect of ParseResults<CollectArgs>
+  | [<CliPrefix(CliPrefix.DoubleDash)>] Links_Collect of ParseResults<CollectArgs>
   | [<CliPrefix(CliPrefix.DoubleDash)>] Scissors of ParseResults<ScissorsArgs>
 with
   interface IArgParserTemplate with
@@ -52,9 +55,11 @@ with
       match s with
       | Schema_Svg _ -> "Render schema graph to SVG"
       | Route_Svg _ -> "Render route map to SVG"
+      | Links_Svg _ -> "Render links graph to SVG"
       | Merge _ -> "Merge multiple OpenAPI specs into one"
       | Schema_Collect _ -> "Collect Schema Graph IR as JSON"
       | Route_Collect _ -> "Collect Route Map IR as JSON"
+      | Links_Collect _ -> "Collect LinksGraph IR as JSON"
       | Scissors _ -> "Cut subset of spec by tags/paths/operations"
 
 and MergeArgs =
@@ -111,6 +116,14 @@ let main argv =
           | Some name, false -> exportSingleComponentSchemaToSvg doc name outp; 0
           | None, false -> exportSchemaGraphToSvg doc outp; 0
           | _, true -> exportSchemaGraphToDot doc outp; 0
+      | Error e -> eprintfn "%A" e; 2
+  | Links_Svg links ->
+      let input = links.GetResult(<@ CollectArgs.Input @>)
+      let outp = links.GetResult(<@ CollectArgs.Out @>)
+      match readSpecification input with
+      | Ok doc ->
+          exportLinksGraphToSvg doc outp
+          0
       | Error e -> eprintfn "%A" e; 2
   | Route_Svg route ->
       let input = route.GetResult(<@ RouteArgs.Input @>)
@@ -175,6 +188,53 @@ let main argv =
             jw.WriteEndObject()
           jw.WriteEndArray()
           jw.WriteEndObject(); jw.Flush(); 0
+  | Links_Collect args ->
+      let input = args.GetResult(<@ CollectArgs.Input @>)
+      let outp = args.GetResult(<@ CollectArgs.Out @>)
+      match readSpecification input with
+      | Error e -> eprintfn "%A" e; 2
+      | Ok doc ->
+          let graph = collectLinksGraph doc
+          use fs = new FileStream(outp, FileMode.Create, FileAccess.Write, FileShare.None)
+          use jw = new System.Text.Json.Utf8JsonWriter(fs, System.Text.Json.JsonWriterOptions(Indented = true))
+          jw.WriteStartObject()
+          jw.WritePropertyName("operations")
+          jw.WriteStartArray()
+          for operationId in graph.Operations do
+            jw.WriteStringValue(operationId)
+          jw.WriteEndArray()
+          jw.WritePropertyName("links")
+          jw.WriteStartArray()
+          for link in graph.Links do
+            jw.WriteStartObject()
+            jw.WriteString("linkName", link.LinkName)
+            jw.WriteString("sourceOperationId", link.SourceOperationId)
+            jw.WriteString("targetOperationId", link.TargetOperationId)
+            match link.Description with
+            | Some description -> jw.WriteString("description", description)
+            | None -> ()
+            match link.Source with
+            | ResponseBody pointer ->
+                jw.WriteString("sourceKind", "responseBody")
+                jw.WriteString("sourcePointer", pointer)
+            | ResponseHeader headerName ->
+                jw.WriteString("sourceKind", "responseHeader")
+                jw.WriteString("sourceHeader", headerName)
+            | RequestBody pointer ->
+                jw.WriteString("sourceKind", "requestBody")
+                jw.WriteString("sourcePointer", pointer)
+            match link.Target with
+            | OperationParameter parameterName ->
+                jw.WriteString("targetKind", "operationParameter")
+                jw.WriteString("targetParameter", parameterName)
+            | RequestBodyField pointer ->
+                jw.WriteString("targetKind", "requestBodyField")
+                jw.WriteString("targetPointer", pointer)
+            jw.WriteEndObject()
+          jw.WriteEndArray()
+          jw.WriteEndObject()
+          jw.Flush()
+          0
   | Route_Collect args ->
       let input = args.GetResult(<@ CollectArgs.Input @>)
       let outp = args.GetResult(<@ CollectArgs.Out @>)

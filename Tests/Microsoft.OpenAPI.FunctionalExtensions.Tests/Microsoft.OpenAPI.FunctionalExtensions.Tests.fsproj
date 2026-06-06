@@ -20,6 +20,7 @@
         <Compile Include="ReadingTests.fs" />
         <Compile Include="TraversalTests.fs" />
         <Compile Include="OperationsTraversalTests.fs" />
+        <Compile Include="LinksTraversalTests.fs" />
       <Compile Include="OpenApiSchemaAnalysisTests.fs" />
         <Compile Include="AdapterCoreTests.fs" />
         <Compile Include="PropertyTests.fs" />
@@ -52,6 +53,9 @@
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </Content>
       <Content Include="Specifications\medium-complex.yaml">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </Content>
+      <Content Include="Specifications\links-example.yaml">
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </Content>
       <Content Include="..\..\Samples\petstore.yaml">

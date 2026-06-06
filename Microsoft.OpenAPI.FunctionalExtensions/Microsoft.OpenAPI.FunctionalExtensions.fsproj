@@ -45,6 +45,7 @@
       <Compile Include="OpenApiAdapters.fs" />
       <Compile Include="OpenApiTraversal.fs" />
       <Compile Include="OpenApiOperationsTraversal.fs" />
+      <Compile Include="OpenApiLinksTraversal.fs" />
       <Compile Include="OpenApiMerge.fs" />
       <Compile Include="OpenApiScissors.fs" />
       <Compile Include="OpenApiWriterTools.fs" />

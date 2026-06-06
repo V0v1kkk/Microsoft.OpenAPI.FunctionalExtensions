@@ -4,6 +4,7 @@ open Rubjerg.Graphviz
 open Microsoft.OpenApi
 open OpenApiTraversal
 open OpenApiOperationsTraversal
+open OpenApiLinksTraversal
 
 let private safeId (s: string) =
   s.Replace("/", "_").Replace("#", "_").Replace("-", "_")
@@ -240,5 +241,25 @@ let exportRouteMapToSvgWith (doc: OpenApiDocument) (outPath: string) (opts: Rout
 let exportRouteMapToSvg (doc: OpenApiDocument) (outPath: string) =
   let title = if isNull doc.Info || System.String.IsNullOrWhiteSpace doc.Info.Title then None else Some doc.Info.Title
   exportRouteMapToSvgWith doc outPath { CenterLabel = title; IncludeOperations = false; IncludeSchemas = false }
+
+let renderLinksGraph (graph: LinksGraph) (outPath: string) =
+  let root = RootGraph.CreateNew(GraphType.Directed, "links")
+
+  for operationId in graph.Operations do
+    let node = root.GetOrAddNode(safeId operationId)
+    node.SetAttribute("label", operationId) |> ignore
+    node.SetAttribute("shape", "box") |> ignore
+
+  for link in graph.Links do
+    let fromNode = root.GetOrAddNode(safeId link.SourceOperationId)
+    let toNode = root.GetOrAddNode(safeId link.TargetOperationId)
+    let edge = root.GetOrAddEdge(fromNode, toNode, null)
+    edge.SetAttribute("label", link.LinkName) |> ignore
+
+  root.ToSvgFile(outPath)
+
+let exportLinksGraphToSvg (doc: OpenApiDocument) (outPath: string) =
+  let graph = collectLinksGraph doc
+  renderLinksGraph graph outPath
 
 
