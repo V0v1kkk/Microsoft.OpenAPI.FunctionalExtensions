@@ -25,10 +25,12 @@
       <Compile Include="SeqExtensions.fs" />
       <Compile Include="Results.fs" />
       <Compile Include="ResultEx.fs" />
+      <Compile Include="OpenApiAdapterCore.fs" />
       <Compile Include="OpenApiTools.fs" />
       <Compile Include="OpenApiReaderTypes.fs" />
       <Compile Include="OpenApiReaderTools.fs" />
       <Compile Include="OpenApiSchemaAnalysis.fs" />
+      <Compile Include="OpenApiActivePatterns.fs" />
       <Compile Include="OpenApiAdapters.fs" />
       <Compile Include="OpenApiTraversal.fs" />
       <Compile Include="OpenApiOperationsTraversal.fs" />
