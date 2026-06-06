@@ -3,6 +3,7 @@ module OpenApiTraversal
 open System
 open System.Collections.Generic
 open Microsoft.OpenApi
+open Microsoft.OpenAPI.FunctionalExtensions.OpenApiAdapters
 open OpenApiSchemaAnalysis
 
 type CompositionKind =
@@ -43,7 +44,7 @@ type SchemaGraph = {
 
 let private nodeId (rootPointer: string) (schema: IOpenApiSchema) : SchemaNodeRef =
   // Prefer component pointer when schema is a reference or named component; fall back to traversal path
-  match tryGetReferenceId schema with
+  match trySchemaRefName schema with
   | Some id when not (String.IsNullOrWhiteSpace id) -> $"#/components/schemas/{id}"
   | None when not (String.IsNullOrWhiteSpace schema.Id) -> $"#/components/schemas/{schema.Id}"
   | _ -> rootPointer
@@ -86,9 +87,13 @@ let collectSchemaGraphWithRoot (root: IOpenApiSchema) (rootPointer: string) : Sc
       for kv in schema.Properties do
         walk ($"{path}/properties/{kv.Key}") kv.Value (Some id) (Some (Property kv.Key))
 
-    // items
+    // items — when array of a referenced component, use the component pointer for the child, not '/items'
     if schema.Items <> null then
-      walk ($"{path}/items") schema.Items (Some id) (Some ArrayItem)
+      let childPath =
+        match trySchemaRefName schema.Items with
+        | Some rid when not (String.IsNullOrWhiteSpace rid) -> $"#/components/schemas/{rid}"
+        | _ -> $"{path}/items"
+      walk childPath schema.Items (Some id) (Some ArrayItem)
 
     // additionalProperties (map)
     if schema.AdditionalProperties <> null then

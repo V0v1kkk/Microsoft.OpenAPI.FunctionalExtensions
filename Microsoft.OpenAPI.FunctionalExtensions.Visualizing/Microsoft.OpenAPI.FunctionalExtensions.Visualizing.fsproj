@@ -6,7 +6,6 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <Compile Include="SchemaGraph.fs" />
         <Compile Include="GraphvizExport.fs" />
     </ItemGroup>
 

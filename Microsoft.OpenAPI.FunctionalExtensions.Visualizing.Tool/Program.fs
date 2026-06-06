@@ -2,6 +2,7 @@
 open Argu
 open Microsoft.OpenAPI.FunctionalExtensions.OpenApiReaderTools
 open Microsoft.OpenAPI.FunctionalExtensions.Visualizing.GraphvizExport
+open OpenApiTraversal
 open Microsoft.OpenAPI.FunctionalExtensions.OpenApiMerge
 open System.IO
 open Microsoft.OpenApi
@@ -142,7 +143,7 @@ let main argv =
       match readSpecification input with
       | Error e -> eprintfn "%A" e; 2
       | Ok doc ->
-          let g = Microsoft.OpenAPI.FunctionalExtensions.Visualizing.SchemaGraph.collectDocumentSchemas doc
+          let g = collectDocumentSchemas doc
           use fs = new FileStream(outp, FileMode.Create, FileAccess.Write, FileShare.None)
           use jw = new System.Text.Json.Utf8JsonWriter(fs, System.Text.Json.JsonWriterOptions(Indented = true))
           jw.WriteStartObject()
@@ -170,12 +171,12 @@ let main argv =
             jw.WriteString("from", e.FromId)
             jw.WriteString("to", e.ToId)
             match e.EdgeKind with
-            | Microsoft.OpenAPI.FunctionalExtensions.Visualizing.SchemaGraph.Property name -> jw.WriteString("kind", "property"); jw.WriteString("name", name)
-            | Microsoft.OpenAPI.FunctionalExtensions.Visualizing.SchemaGraph.ArrayItem -> jw.WriteString("kind", "arrayItem")
-            | Microsoft.OpenAPI.FunctionalExtensions.Visualizing.SchemaGraph.MapValue -> jw.WriteString("kind", "mapValue")
-            | Microsoft.OpenAPI.FunctionalExtensions.Visualizing.SchemaGraph.Composition ck ->
+            | Property name -> jw.WriteString("kind", "property"); jw.WriteString("name", name)
+            | ArrayItem -> jw.WriteString("kind", "arrayItem")
+            | MapValue -> jw.WriteString("kind", "mapValue")
+            | Composition ck ->
                 jw.WriteString("kind", "composition");
-                let v = match ck with | Microsoft.OpenAPI.FunctionalExtensions.Visualizing.SchemaGraph.AllOf -> "allOf" | Microsoft.OpenAPI.FunctionalExtensions.Visualizing.SchemaGraph.OneOf -> "oneOf" | Microsoft.OpenAPI.FunctionalExtensions.Visualizing.SchemaGraph.AnyOf -> "anyOf"
+                let v = match ck with | AllOf -> "allOf" | OneOf -> "oneOf" | AnyOf -> "anyOf"
                 jw.WriteString("type", v)
             jw.WriteEndObject()
           jw.WriteEndArray()

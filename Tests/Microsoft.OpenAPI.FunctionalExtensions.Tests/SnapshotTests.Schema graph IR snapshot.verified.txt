@@ -67,7 +67,40 @@
       "WriteOnly": false
     },
     {
+      "Id": "#/components/schemas/Pet/properties/id",
+      "Title": null,
+      "Kind": "Integer",
+      "Nullable": null,
+      "Description": null,
+      "Format": "int64",
+      "ReadOnly": false,
+      "EnumValues": null,
+      "WriteOnly": false
+    },
+    {
       "Id": "#/components/schemas/Pet/properties/name",
+      "Title": null,
+      "Kind": "String",
+      "Nullable": null,
+      "Description": null,
+      "Format": null,
+      "ReadOnly": false,
+      "EnumValues": null,
+      "WriteOnly": false
+    },
+    {
+      "Id": "#/components/schemas/Pet/properties/name",
+      "Title": null,
+      "Kind": "String",
+      "Nullable": null,
+      "Description": null,
+      "Format": null,
+      "ReadOnly": false,
+      "EnumValues": null,
+      "WriteOnly": false
+    },
+    {
+      "Id": "#/components/schemas/Pet/properties/tag",
       "Title": null,
       "Kind": "String",
       "Nullable": null,
@@ -98,39 +131,6 @@
       "ReadOnly": false,
       "EnumValues": null,
       "WriteOnly": false
-    },
-    {
-      "Id": "#/components/schemas/Pets/items/properties/id",
-      "Title": null,
-      "Kind": "Integer",
-      "Nullable": null,
-      "Description": null,
-      "Format": "int64",
-      "ReadOnly": false,
-      "EnumValues": null,
-      "WriteOnly": false
-    },
-    {
-      "Id": "#/components/schemas/Pets/items/properties/name",
-      "Title": null,
-      "Kind": "String",
-      "Nullable": null,
-      "Description": null,
-      "Format": null,
-      "ReadOnly": false,
-      "EnumValues": null,
-      "WriteOnly": false
-    },
-    {
-      "Id": "#/components/schemas/Pets/items/properties/tag",
-      "Title": null,
-      "Kind": "String",
-      "Nullable": null,
-      "Description": null,
-      "Format": null,
-      "ReadOnly": false,
-      "EnumValues": null,
-      "WriteOnly": false
     }
   ],
   "Edges": [
@@ -151,6 +151,16 @@
     },
     {
       "FromId": "#/components/schemas/Pet",
+      "ToId": "#/components/schemas/Pet/properties/id",
+      "EdgeKind": "Property(id)"
+    },
+    {
+      "FromId": "#/components/schemas/Pet",
+      "ToId": "#/components/schemas/Pet/properties/name",
+      "EdgeKind": "Property(name)"
+    },
+    {
+      "FromId": "#/components/schemas/Pet",
       "ToId": "#/components/schemas/Pet/properties/name",
       "EdgeKind": "Property(name)"
     },
@@ -161,17 +171,7 @@
     },
     {
       "FromId": "#/components/schemas/Pet",
-      "ToId": "#/components/schemas/Pets/items/properties/id",
-      "EdgeKind": "Property(id)"
-    },
-    {
-      "FromId": "#/components/schemas/Pet",
-      "ToId": "#/components/schemas/Pets/items/properties/name",
-      "EdgeKind": "Property(name)"
-    },
-    {
-      "FromId": "#/components/schemas/Pet",
-      "ToId": "#/components/schemas/Pets/items/properties/tag",
+      "ToId": "#/components/schemas/Pet/properties/tag",
       "EdgeKind": "Property(tag)"
     },
     {
