@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <Compile Include="Program.fs" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Microsoft.OpenAPI.FunctionalExtensions\Microsoft.OpenAPI.FunctionalExtensions.fsproj" />
+        <ProjectReference Include="..\Microsoft.OpenAPI.FunctionalExtensions.Linting\Microsoft.OpenAPI.FunctionalExtensions.Linting.fsproj" />
+        <ProjectReference Include="..\Microsoft.OpenAPI.FunctionalExtensions.Visualizing\Microsoft.OpenAPI.FunctionalExtensions.Visualizing.fsproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <Content Include="..\Samples\petstore.yaml">
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+            <Link>Samples\petstore.yaml</Link>
+        </Content>
+        <Content Include="..\Samples\petstore-extended.yaml">
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+            <Link>Samples\petstore-extended.yaml</Link>
+        </Content>
+    </ItemGroup>
+
+</Project>

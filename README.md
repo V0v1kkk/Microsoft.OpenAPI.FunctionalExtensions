@@ -70,6 +70,28 @@ match readSpecification specPath with
 
 See [docs/LINTING.md](docs/LINTING.md) for lint rule configuration and CLI usage.
 
+## Live Examples
+
+The [`Examples/`](Examples/) project contains runnable demonstrations of all library features:
+
+```bash
+dotnet run --project Examples/
+```
+
+Key scenarios demonstrated:
+- Reading OpenAPI specs (YAML/JSON)
+- Schema graph traversal (nodes, edges, compositions)
+- Route map extraction
+- Links discovery between operations
+- Linting with default and custom rules
+- Spec subsetting (scissors) by tags/paths
+- Merging multiple specifications
+- Graphviz SVG export
+
+Each section in [`Examples/Program.fs`](Examples/Program.fs) is self-contained and heavily commented — use it as a starting point for your own code.
+
+For more detailed usage patterns, see the [test suite](Tests/Microsoft.OpenAPI.FunctionalExtensions.Tests/) which covers edge cases, property-based testing, and snapshot verification.
+
 ## CLI Tool
 
 ### Installation
