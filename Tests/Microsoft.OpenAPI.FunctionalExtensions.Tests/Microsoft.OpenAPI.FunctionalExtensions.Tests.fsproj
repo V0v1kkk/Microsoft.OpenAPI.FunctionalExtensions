@@ -22,6 +22,7 @@
         <Compile Include="OperationsTraversalTests.fs" />
       <Compile Include="OpenApiSchemaAnalysisTests.fs" />
         <Compile Include="AdapterCoreTests.fs" />
+        <Compile Include="PropertyTests.fs" />
         <Compile Include="SchemaAdaptersTests.fs" />
         <Compile Include="DocumentAdaptersTests.fs" />
         <Compile Include="ScissorsTests.fs" />
