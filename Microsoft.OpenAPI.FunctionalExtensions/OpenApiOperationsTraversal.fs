@@ -1,11 +1,9 @@
 module OpenApiOperationsTraversal
 
 open System
-open System.Collections.Generic
 open System.Net.Http
 open Microsoft.OpenApi
-open Microsoft.OpenAPI.FunctionalExtensions.OpenApiAdapters
-open SeqExtensions
+open Microsoft.OpenAPI.FunctionalExtensions.ActivePatterns
 
 type Route = {
   Path: string
@@ -26,119 +24,121 @@ type RouteMap = {
 
 let private toMethodString (m: HttpMethod) = m.Method
 
-let private schemaRefPointerFromInterface (schema: IOpenApiSchema) : string option =
-  schema
-  |> trySchemaRefName
-  |> Option.map (fun id -> $"#/components/schemas/{id}")
-  |> Option.orElseWith (fun () ->
+let private schemaRefPointer (schema: IOpenApiSchema) : string option =
+  Microsoft.OpenAPI.FunctionalExtensions.ReferenceAdapters.trySchemaReferenceId schema
+  |> Option.map Microsoft.OpenAPI.FunctionalExtensions.ReferenceAdapters.referencePointer
+
+let private schemaRefPointers (schemas: seq<IOpenApiSchema>) : string list =
+  schemas |> Seq.choose schemaRefPointer |> Seq.distinct |> Seq.toList
+
+let private parameterSchemaRefs (parameters: IOpenApiParameter list) : string list =
+  parameters
+  |> List.collect (fun parameter ->
+      match parameter with
+      | null -> []
+      | param ->
+          match param.Schema with
+          | null ->
+              Microsoft.OpenAPI.FunctionalExtensions.OperationAdapters.schemasFromContent param.Content
+              |> List.toSeq
+              |> schemaRefPointers
+          | schema -> schemaRefPointer schema |> Option.toList)
+  |> List.distinct
+
+let private requestSchemaRefs (request: IOpenApiRequestBody option) : string list =
+  request
+  |> Option.map (fun body ->
+      Microsoft.OpenAPI.FunctionalExtensions.OperationAdapters.schemasFromContent body.Content
+      |> List.toSeq
+      |> schemaRefPointers)
+  |> Option.defaultValue []
+
+let private responseSchemaRefs (responses: Map<string, IOpenApiResponse>) : string list =
+  responses
+  |> Map.values
+  |> Seq.collect (fun response ->
+      match response with
+      | null -> Seq.empty
+      | resp ->
+          Microsoft.OpenAPI.FunctionalExtensions.OperationAdapters.schemasFromContent resp.Content
+          |> List.toSeq)
+  |> schemaRefPointers
+
+let private responseSchemaObjects (responses: Map<string, IOpenApiResponse>) : IOpenApiSchema list =
+  responses
+  |> Map.values
+  |> Seq.collect (fun response ->
+      match response with
+      | null -> Seq.empty
+      | resp ->
+          Microsoft.OpenAPI.FunctionalExtensions.OperationAdapters.schemasFromContent resp.Content
+          |> List.toSeq
+          |> Seq.choose (function
+              | :? OpenApiSchema as schema -> Some (schema :> IOpenApiSchema)
+              | _ -> None))
+  |> Seq.toList
+
+let private resolveSchema (document: OpenApiDocument) (schema: IOpenApiSchema) : IOpenApiSchema option =
+  match Microsoft.OpenAPI.FunctionalExtensions.ReferenceAdapters.tryResolveSchemaReference document schema with
+  | Some resolved -> Some resolved
+  | None ->
       match schema with
-      | :? OpenApiSchema as s when not (String.IsNullOrWhiteSpace s.Id) -> Some ($"#/components/schemas/{s.Id}")
-      | _ -> None)
+      | null -> None
+      | unresolved -> Some unresolved
 
-let private collectSchemasFromContent (content: IDictionary<string, IOpenApiMediaType>) : seq<string> =
-  schemasFromContent content
-  |> Seq.choose schemaRefPointerFromInterface
+let private isArraySchema (document: OpenApiDocument) (schema: IOpenApiSchema) : bool =
+  match resolveSchema document schema with
+  | None -> false
+  | Some resolved ->
+      let hasArrayType =
+        Microsoft.OpenAPI.FunctionalExtensions.SchemaAdapters.schemaType resolved
+        |> Option.exists (fun schemaType -> (schemaType &&& JsonSchemaType.Array) = JsonSchemaType.Array)
 
-let private collectParameterSchemas (parameters: IList<IOpenApiParameter>) : seq<string> =
-  match parameters with
-  | null -> Seq.empty
-  | ps ->
-      ps
-      |> Seq.collect (fun p ->
-          match p with
-          | null -> Seq.empty
-          | _ when not (isNull p.Schema) ->
-              match schemaRefPointerFromInterface p.Schema with
-              | Some x -> seq { yield x }
-              | None -> Seq.empty
-          | _ when not (isNull p.Content) -> collectSchemasFromContent p.Content
-          | _ -> Seq.empty)
+      let hasItems =
+        Microsoft.OpenAPI.FunctionalExtensions.SchemaAdapters.schemaItems resolved
+        |> Option.isSome
 
-let private collectRequestSchemas (request: IOpenApiRequestBody) : seq<string> =
-  match request with
-  | null -> Seq.empty
-  | r -> collectSchemasFromContent r.Content
+      hasArrayType || hasItems
 
-let private collectResponseSchemas (responses: OpenApiResponses) : seq<string> =
-  match responses with
-  | null -> Seq.empty
-  | rs -> rs |> Seq.collect (fun kv -> match kv.Value with null -> Seq.empty | r -> collectSchemasFromContent r.Content)
-
-let private collectResponseSchemaObjects (responses: OpenApiResponses) : seq<OpenApiSchema> =
-  match responses with
-  | null -> Seq.empty
-  | rs ->
-      rs
-      |> Seq.collect (fun kv ->
-          match kv.Value with
-          | null -> Seq.empty
-          | r when isNull r.Content -> Seq.empty
-          | r ->
-              r.Content.Values
-              |> Seq.choose (fun mt ->
-                  match mt with
-                  | null -> None
-                  | m when isNull m.Schema -> None
-                  | m ->
-                      match m.Schema with
-                      | :? OpenApiSchema as s -> Some s
-                      | _ -> None))
+let private isViaDataArray (document: OpenApiDocument) (schema: IOpenApiSchema) : bool =
+  match resolveSchema document schema with
+  | None -> false
+  | Some resolved ->
+      match resolved with
+      | ObjectSchema properties ->
+          match properties.TryGetValue "data" with
+          | true, dataSchema -> isArraySchema document dataSchema
+          | _ -> false
+      | _ -> false
 
 let collectRouteMap (doc: OpenApiDocument) : RouteMap =
   let routes = ResizeArray<Route>()
 
-  let rec resolveSchema (s: OpenApiSchema) : OpenApiSchema =
-    if isNull s then null
-    elif not (String.IsNullOrWhiteSpace s.Id) && not (isNull doc.Components) && not (isNull doc.Components.Schemas) then
-      match doc.Components.Schemas.TryGetValue s.Id with
-      | true, sch -> (sch :?> OpenApiSchema)
-      | _ -> s
-    else s
+  let folder (state: unit) (path: string, method: HttpMethod, operation: OpenApiOperation) =
+    let responses = Microsoft.OpenAPI.FunctionalExtensions.OperationAdapters.operationResponses operation
+    let responseObjects = responseSchemaObjects responses
 
-  let rec isArraySchema (s: OpenApiSchema) : bool =
-    match resolveSchema s with
-    | null -> false
-    | s' when s'.Type.HasValue && (s'.Type.Value &&& JsonSchemaType.Array) = JsonSchemaType.Array -> true
-    | s' when not (isNull s'.Items) -> true
-    | _ -> false
-
-  let rec isViaDataArray (s: OpenApiSchema) : bool =
-    match resolveSchema s with
-    | null -> false
-    | s' when isNull s'.Properties -> false
-    | s' ->
-        match s'.Properties.TryGetValue "data" with
-        | true, dataSch -> isArraySchema (dataSch :?> OpenApiSchema)
-        | _ -> false
-
-  // Use adapter to fold operations in a functional way
-  let folder (state: unit) (path: string, opType: HttpMethod, op: OpenApiOperation) =
-    let parameterSchemas = collectParameterSchemas op.Parameters |> Seq.distinct |> Seq.toList
-    let requestSchemas = collectRequestSchemas op.RequestBody |> Seq.distinct |> Seq.toList
-    let responseSchemasSeq = collectResponseSchemas op.Responses
-    let responseSchemas = responseSchemasSeq |> Seq.distinct |> Seq.toList
-    let returnsArray =
-      collectResponseSchemaObjects op.Responses
-      |> Seq.exists (fun sch -> let s = resolveSchema sch in isArraySchema s)
-    let returnsArrayViaData =
-      collectResponseSchemaObjects op.Responses
-      |> Seq.exists (fun sch -> let s = resolveSchema sch in isViaDataArray s)
     let route = {
       Path = path
-      Method = toMethodString opType
-      OperationId = if String.IsNullOrWhiteSpace op.OperationId then None else Some op.OperationId
-      Tags = if isNull op.Tags then [] else op.Tags |> Seq.choose (fun t -> if isNull t then None else Some t.Name) |> Seq.toList
-      ParameterSchemas = parameterSchemas
-      RequestSchemas = requestSchemas
-      ResponseSchemas = responseSchemas
-      ReturnsArray = returnsArray
-      ReturnsArrayViaData = returnsArrayViaData
+      Method = toMethodString method
+      OperationId =
+        if String.IsNullOrWhiteSpace operation.OperationId then None
+        else Some operation.OperationId
+      Tags = Microsoft.OpenAPI.FunctionalExtensions.OperationAdapters.operationTags operation
+      ParameterSchemas =
+        Microsoft.OpenAPI.FunctionalExtensions.OperationAdapters.operationParameters operation
+        |> parameterSchemaRefs
+      RequestSchemas =
+        Microsoft.OpenAPI.FunctionalExtensions.OperationAdapters.operationRequestBody operation
+        |> requestSchemaRefs
+      ResponseSchemas = responseSchemaRefs responses
+      ReturnsArray = responseObjects |> List.exists (isArraySchema doc)
+      ReturnsArrayViaData = responseObjects |> List.exists (isViaDataArray doc)
       HasOperations = true
     }
+
     routes.Add route
     state
 
-  foldOperations doc folder () |> ignore
+  Microsoft.OpenAPI.FunctionalExtensions.DocumentAdapters.foldAllOperations doc folder () |> ignore
   { Routes = routes }
-
-
