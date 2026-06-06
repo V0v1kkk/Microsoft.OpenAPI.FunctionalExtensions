@@ -24,4 +24,8 @@
         <Compile Include="Program.fs" />
     </ItemGroup>
 
+    <ItemGroup>
+        <ProjectReference Include="..\..\Microsoft.OpenAPI.FunctionalExtensions.Visualizing.Tool\Microsoft.OpenAPI.FunctionalExtensions.Visualizing.Tool.fsproj" />
+    </ItemGroup>
+
 </Project>
