@@ -28,6 +28,7 @@
         <Compile Include="ComplexSpecTests.fs" />
         <Compile Include="SchemaAdaptersTests.fs" />
         <Compile Include="DocumentAdaptersTests.fs" />
+        <Compile Include="LintingTests.fs" />
         <Compile Include="ScissorsTests.fs" />
         <Compile Include="MergeSpecsTests.fs" />
         <Compile Include="AdaptersTests.fs" />
@@ -70,6 +71,7 @@
 
     <ItemGroup>
       <ProjectReference Include="..\..\Microsoft.OpenAPI.FunctionalExtensions\Microsoft.OpenAPI.FunctionalExtensions.fsproj" />
+      <ProjectReference Include="..\..\Microsoft.OpenAPI.FunctionalExtensions.Linting\Microsoft.OpenAPI.FunctionalExtensions.Linting.fsproj" />
     </ItemGroup>
 
 </Project>

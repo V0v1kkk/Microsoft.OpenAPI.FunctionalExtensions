@@ -1,21 +1,30 @@
 ﻿module Microsoft.OpenAPI.FunctionalExtensions.Linting.Types
 
-type LintingFail =
-  | AnalyzingError of string
-  | AnalyzingException of CaseDefinition:string * Exception:System.Exception 
+open Microsoft.OpenApi
 
+type Severity =
+    | Error
+    | Warning
+    | Info
 
-type AlarmSubType = Tbd | Empty
+type LintLocation =
+    | DocumentLevel
+    | PathLevel of path: string
+    | OperationLevel of path: string * method: string * operationId: string option
+    | SchemaLevel of schemaName: string
+    | SchemaPropertyLevel of schemaName: string * propertyName: string
+    | ParameterLevel of path: string * method: string * parameterName: string
 
-// linter alarms
-type EmptyOrBadOperationSummary = {OperationId: string; SubType: AlarmSubType}
-type BadOperationDescription = {OperationId: string}
-type EmptyOrBadParameterDescription = {OperationId: string; ParameterName: string; SubType: AlarmSubType}
-type EmptyOrBadSchemaPropertyDescription = {SchemaName: string; PropertyName: string; SubType: AlarmSubType}
+type LintViolation = {
+    Rule: string
+    Severity: Severity
+    Message: string
+    Location: LintLocation
+}
 
-type LinterAlarm =
-  | EmptyOrBadOperationSummary
-  | BadOperationDescription
-  | BadParameterDescription
-  | BadSchemaPropertyDescription
-  
+type LintResult = {
+    Violations: LintViolation list
+    DocumentPath: string option
+}
+
+type LintRule = OpenApiDocument -> LintViolation list
