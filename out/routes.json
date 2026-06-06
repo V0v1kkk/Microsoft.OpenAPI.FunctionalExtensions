@@ -1,0 +1,10 @@
+{
+  "routes": [
+    {
+      "path": "/pets",
+      "method": "GET",
+      "operationId": "listPets",
+      "tags": [
+        "pets"
+      ],
+      "parameterSchemas": [

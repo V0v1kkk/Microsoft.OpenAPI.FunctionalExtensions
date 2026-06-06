@@ -1,0 +1,134 @@
+{
+  "nodes": [
+    {
+      "id": "#/components/schemas/Pet",
+      "kind": "Object",
+      "readOnly": false,
+      "writeOnly": false
+    },
+    {
+      "id": "#/components/schemas/Pet/properties/id",
+      "kind": "Integer",
+      "format": "int64",
+      "readOnly": false,
+      "writeOnly": false
+    },
+    {
+      "id": "#/components/schemas/Pet/properties/name",
+      "kind": "String",
+      "readOnly": false,
+      "writeOnly": false
+    },
+    {
+      "id": "#/components/schemas/Pet/properties/tag",
+      "kind": "String",
+      "readOnly": false,
+      "writeOnly": false
+    },
+    {
+      "id": "#/components/schemas/Pets",
+      "kind": "Array",
+      "readOnly": false,
+      "writeOnly": false
+    },
+    {
+      "id": "#/components/schemas/Pet",
+      "kind": "Object",
+      "readOnly": false,
+      "writeOnly": false
+    },
+    {
+      "id": "#/components/schemas/Pets/items/properties/id",
+      "kind": "Integer",
+      "format": "int64",
+      "readOnly": false,
+      "writeOnly": false
+    },
+    {
+      "id": "#/components/schemas/Pets/items/properties/name",
+      "kind": "String",
+      "readOnly": false,
+      "writeOnly": false
+    },
+    {
+      "id": "#/components/schemas/Pets/items/properties/tag",
+      "kind": "String",
+      "readOnly": false,
+      "writeOnly": false
+    },
+    {
+      "id": "#/components/schemas/Error",
+      "kind": "Object",
+      "readOnly": false,
+      "writeOnly": false
+    },
+    {
+      "id": "#/components/schemas/Error/properties/code",
+      "kind": "Integer",
+      "format": "int32",
+      "readOnly": false,
+      "writeOnly": false
+    },
+    {
+      "id": "#/components/schemas/Error/properties/message",
+      "kind": "String",
+      "readOnly": false,
+      "writeOnly": false
+    }
+  ],
+  "edges": [
+    {
+      "from": "#/components/schemas/Pet",
+      "to": "#/components/schemas/Pet/properties/id",
+      "kind": "property",
+      "name": "id"
+    },
+    {
+      "from": "#/components/schemas/Pet",
+      "to": "#/components/schemas/Pet/properties/name",
+      "kind": "property",
+      "name": "name"
+    },
+    {
+      "from": "#/components/schemas/Pet",
+      "to": "#/components/schemas/Pet/properties/tag",
+      "kind": "property",
+      "name": "tag"
+    },
+    {
+      "from": "#/components/schemas/Pets",
+      "to": "#/components/schemas/Pet",
+      "kind": "arrayItem"
+    },
+    {
+      "from": "#/components/schemas/Pet",
+      "to": "#/components/schemas/Pets/items/properties/id",
+      "kind": "property",
+      "name": "id"
+    },
+    {
+      "from": "#/components/schemas/Pet",
+      "to": "#/components/schemas/Pets/items/properties/name",
+      "kind": "property",
+      "name": "name"
+    },
+    {
+      "from": "#/components/schemas/Pet",
+      "to": "#/components/schemas/Pets/items/properties/tag",
+      "kind": "property",
+      "name": "tag"
+    },
+    {
+      "from": "#/components/schemas/Error",
+      "to": "#/components/schemas/Error/properties/code",
+      "kind": "property",
+      "name": "code"
+    },
+    {
+      "from": "#/components/schemas/Error",
+      "to": "#/components/schemas/Error/properties/message",
+      "kind": "property",
+      "name": "message"
+    }
+  ]
+}

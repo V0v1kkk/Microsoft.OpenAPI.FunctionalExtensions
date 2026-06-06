@@ -1,0 +1,32 @@
+digraph schemas {
+  __components_schemas_Pet [label="Pet"];
+  __components_schemas_Pet_properties_id [label="id"];
+  __components_schemas_Pet_properties_name [label="name"];
+  __components_schemas_Pet_properties_tag [label="tag"];
+  __components_schemas_Pets [label="Pets"];
+  __components_schemas_Pet [label="Pet"];
+  __components_schemas_Pet_properties_id [label="id"];
+  __components_schemas_Pet_properties_name [label="name"];
+  __components_schemas_Pet_properties_tag [label="tag"];
+  __components_schemas_Error [label="Error"];
+  __components_schemas_Error_properties_code [label="code"];
+  __components_schemas_Error_properties_message [label="message"];
+  __components_schemas_Pet -> __components_schemas_Pet_properties_id;
+  __components_schemas_Pet -> __components_schemas_Pet_properties_name;
+  __components_schemas_Pet -> __components_schemas_Pet_properties_tag;
+  __components_schemas_Pets -> __components_schemas_Pet;
+  __components_schemas_Pet -> __components_schemas_Pet_properties_id;
+  __components_schemas_Pet -> __components_schemas_Pet_properties_name;
+  __components_schemas_Pet -> __components_schemas_Pet_properties_tag;
+  __components_schemas_Error -> __components_schemas_Error_properties_code;
+  __components_schemas_Error -> __components_schemas_Error_properties_message;
+  __components_schemas_Pet_properties_id [label="id\n(Integer/int64)"];
+  __components_schemas_Pet_properties_name [label="name\n(String)"];
+  __components_schemas_Pet_properties_tag [label="tag\n(String)"];
+  __components_schemas_Pet [label="items\n(array[Pet])"];
+  __components_schemas_Pet_properties_id [label="id\n(Integer/int64)"];
+  __components_schemas_Pet_properties_name [label="name\n(String)"];
+  __components_schemas_Pet_properties_tag [label="tag\n(String)"];
+  __components_schemas_Error_properties_code [label="code\n(Integer/int32)"];
+  __components_schemas_Error_properties_message [label="message\n(String)"];
+}
