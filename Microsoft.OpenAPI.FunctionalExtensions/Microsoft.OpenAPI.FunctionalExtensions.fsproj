@@ -29,9 +29,11 @@
       <Compile Include="OpenApiReaderTypes.fs" />
       <Compile Include="OpenApiReaderTools.fs" />
       <Compile Include="OpenApiSchemaAnalysis.fs" />
+      <Compile Include="OpenApiAdapters.fs" />
       <Compile Include="OpenApiTraversal.fs" />
       <Compile Include="OpenApiOperationsTraversal.fs" />
       <Compile Include="OpenApiMerge.fs" />
+      <Compile Include="OpenApiScissors.fs" />
     </ItemGroup>
 
 </Project>
