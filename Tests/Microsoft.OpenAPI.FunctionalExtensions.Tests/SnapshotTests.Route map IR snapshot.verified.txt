@@ -1,0 +1,54 @@
+﻿{
+  "Routes": [
+    {
+      "Path": "/pets",
+      "Method": "GET",
+      "OperationId": "listPets",
+      "Tags": [
+        "pets"
+      ],
+      "ParameterSchemas": [],
+      "RequestSchemas": [],
+      "ResponseSchemas": [
+        "#/components/schemas/Pets",
+        "#/components/schemas/Error"
+      ],
+      "ReturnsArray": false,
+      "ReturnsArrayViaData": false,
+      "HasOperations": true
+    },
+    {
+      "Path": "/pets",
+      "Method": "POST",
+      "OperationId": "createPets",
+      "Tags": [
+        "pets"
+      ],
+      "ParameterSchemas": [],
+      "RequestSchemas": [],
+      "ResponseSchemas": [
+        "#/components/schemas/Error"
+      ],
+      "ReturnsArray": false,
+      "ReturnsArrayViaData": false,
+      "HasOperations": true
+    },
+    {
+      "Path": "/pets/{petId}",
+      "Method": "GET",
+      "OperationId": "showPetById",
+      "Tags": [
+        "pets"
+      ],
+      "ParameterSchemas": [],
+      "RequestSchemas": [],
+      "ResponseSchemas": [
+        "#/components/schemas/Pet",
+        "#/components/schemas/Error"
+      ],
+      "ReturnsArray": false,
+      "ReturnsArrayViaData": false,
+      "HasOperations": true
+    }
+  ]
+}

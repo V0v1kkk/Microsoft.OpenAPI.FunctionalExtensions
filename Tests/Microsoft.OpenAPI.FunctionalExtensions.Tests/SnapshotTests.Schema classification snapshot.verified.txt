@@ -1,0 +1,29 @@
+﻿[
+  {
+    "Name": "Error",
+    "Kind": "Object",
+    "ElementRef": null,
+    "ReferenceId": null,
+    "PrimitiveKind": null,
+    "Format": null,
+    "Nullable": null
+  },
+  {
+    "Name": "Pet",
+    "Kind": "Object",
+    "ElementRef": null,
+    "ReferenceId": null,
+    "PrimitiveKind": null,
+    "Format": null,
+    "Nullable": null
+  },
+  {
+    "Name": "Pets",
+    "Kind": "Array",
+    "ElementRef": "Pet",
+    "ReferenceId": null,
+    "PrimitiveKind": null,
+    "Format": null,
+    "Nullable": null
+  }
+]
