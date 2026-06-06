@@ -264,3 +264,9 @@ Exit codes:
 - Decide based on API ergonomics from F#, capabilities, and output quality. Keep initial implementation on simple DOT emission for reliability.
 
 
+
+## Review and Feedback
+
+* Support complex yaml in extension values parsing
+* Handle circular references in schemas
+* Support nullability in schemas

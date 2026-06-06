@@ -16,3 +16,4 @@ bin
 .ionide/
 .idea/
 .fake
+.agents/skills/

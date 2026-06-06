@@ -5,6 +5,7 @@ Functional F# utilities and tools on top of Microsoft.OpenApi for traversing, an
 ### Overview
 
 - Core library: traversal helpers for schemas (incl. allOf/oneOf/anyOf) and operations; ROP-style flows using FSharp.Core `Result` + helpers in `ResultEx`.
+- Functional Adapters (public API): `OpenApiAdapters` — null-safe, functional helpers over Microsoft.OpenApi v2.0 models (safe enumerations, folds, schema reference helpers).
 - Visualization: Graphviz SVG export using `Rubjerg.Graphviz`.
 - CLI: quick routes/schemas visualizations for large specs.
 
@@ -41,6 +42,35 @@ dotnet run --project /home/vladimir/GitRoot/F/Microsoft.OpenAPI.FunctionalExtens
   --route-svg --input /home/vladimir/GitRoot/F/Microsoft.OpenAPI.FunctionalExtensions/Samples/petstore.yaml --out /home/vladimir/GitRoot/F/Microsoft.OpenAPI.FunctionalExtensions/out/routes.svg
 ```
 
+Collect Schema Graph IR (JSON):
+
+```bash
+dotnet run --project Microsoft.OpenAPI.FunctionalExtensions.Visualizing.Tool -- \
+  --schema-collect --input Samples/petstore.yaml --out out/schema.json
+```
+
+Collect Route Map IR (JSON):
+
+```bash
+dotnet run --project Microsoft.OpenAPI.FunctionalExtensions.Visualizing.Tool -- \
+  --route-collect --input Samples/petstore.yaml --out out/routes.json
+```
+
+Merge multiple specifications (experimental):
+
+```bash
+dotnet run --project Microsoft.OpenAPI.FunctionalExtensions.Visualizing.Tool -- \
+  --merge --input Samples/petstore.yaml --input Samples/petstore-extended.yaml --out out/merged.yaml
+```
+
+Cut (scissors) a subset of a spec by tags/paths/operation ids:
+
+```bash
+dotnet run --project Microsoft.OpenAPI.FunctionalExtensions.Visualizing.Tool -- \
+  --scissors --input Samples/petstore.yaml --out out/cut.yaml \
+  --include-tag pets --include-path /pets --include-operation showPetById
+```
+
 Advanced route options:
 
 ```bash
@@ -61,15 +91,15 @@ dotnet run --project Microsoft.OpenAPI.FunctionalExtensions.Visualizing.Tool -- 
 
 Notes:
 - Schema labels omit noisy prefixes (e.g., `#/components/schemas/Person` → `Person`).
-- Property nodes include: type, array item type (`array of X`), nullability (`?`), format (when present), readOnly marker, and enum values.
-- Edge labels: `propertyName`, `items`, `map value`, `allOf|oneOf|anyOf`.
+- Property nodes include: type; arrays are shown as `array[Type]`; nullability marker `?`; format (when present); readOnly marker; enum values.
+- Edges are unlabeled in SVG for readability; DOT/IR include edge kinds.
 - Route IR tracks `ReturnsArray`, `ReturnsArrayViaData`, `HasOperations` for future highlighting.
 
 ### Roadmap (visualization)
 
 - Align route layout and annotations with the TypeScript prototype (hub, per-path nodes; optional operations; optional schema links).
 - Expand schema reference discovery across all operation parts (params, request bodies, responses, headers, callbacks, links, etc.).
-- Snapshot tests for SVG outputs via Verify.
+- Snapshot tests for DOT and IR JSON via Verify.
 
 ### License
 

@@ -1,0 +1,78 @@
+---
+description:
+globs:
+alwaysApply: true
+---
+## Project Rules and Conventions
+
+This document defines the mandatory engineering rules for this repository. It complements PLAN.md and applies to all code (library, tools, and tests).
+
+### Core principles
+
+- Functional-first (F#): immutability by default, pure functions where practical, explicit inputs/outputs, small composable units.
+- Railway-Oriented Programming (ROP): all domain workflows return `Result<'ok,'err>` or `Async<Result<'ok,'err>>`.
+- Separation of concerns: data collection/IR is separate from visualization/rendering; no renderer-specific logic in traversal/IR.
+
+### Result usage (mandatory)
+
+- Use FSharp.Core `Result` and `Async<Result<_,_>>`. Do not introduce custom Result types.
+- Prefer helpers in `ResultEx` for composition: `map`, `bind`, `mapError`, `bindError`, `apply`, `ofOption`, `sequence`, `traverse`, `tryCatch`, and `AsyncResult.*`.
+- Do not use exceptions for control flow. Convert exceptions at boundaries via `tryCatch` into `Error` with rich context.
+- Public APIs expose `Result`-based contracts; exceptions are allowed only for unrecoverable programmer errors (e.g., argument null in internal code paths).
+
+### F# style (mandatory)
+
+- Prefer pattern matching over `if/else` when matching cases or handling nulls/options/DU cases.
+- Use options instead of nulls in internal domain types; convert input nulls to `option` at the edges.
+- Naming: descriptive, readable; functions are verbs, values are nouns; no abbreviations if avoidable.
+- Control flow: guard clauses and early returns; avoid deep nesting; keep functions small and focused.
+- Comments: explain the “why”, not the “how”; avoid redundant comments; no TODOs—implement or create an issue.
+
+### OpenAPI.NET v2.0 specifics (mandatory)
+
+- Use `Microsoft.OpenApi` v2.0.0 APIs.
+  - Prefer interfaces: `IOpenApiSchema`, `IOpenApiParameter`, `IOpenApiPathItem`, etc.
+  - HTTP methods are `System.Net.Http.HttpMethod` (not `OperationType`).
+  - Schema types are `JsonSchemaType` flags. Nullability is represented via `JsonSchemaType.Null` (no `Nullable` bool on schema).
+  - Any/extension values are `JsonNode`/`JsonNodeExtension`. Use the JsonNode-based helpers in `OpenApiTools` (`tryGetValue`, `getExtensionValue`).
+  - Readers: use `OpenApiDocument.Parse/Load/LoadAsync`. For YAML, register the YAML reader via `OpenApiReaderSettingsExtensions.AddYamlReader`.
+  - References use `OpenApi*Reference` wrappers; do not assume concrete instances. Prefer working against `IOpenApi*` and pattern matching on concrete types only when necessary.
+  - Collections may be null—handle with pattern matching (`match x with null -> ...`).
+
+### Traversal & IR
+
+- Traversal modules (`OpenApiTraversal`, `OpenApiOperationsTraversal`) must:
+  - Work against interfaces (`IOpenApiSchema` etc.) and avoid unsafe casts.
+  - Cover compositions consistently: `allOf`, `oneOf`, `anyOf`.
+  - Gracefully handle cycles and visited caches.
+  - Expose simple IR types for schema graphs and route maps; IR must be renderer-agnostic.
+
+### Visualization (Graphviz)
+
+- Graph rendering uses IR only. Rendering-specific styling stays in `Visualizing` projects.
+- Schema node labels must include: name/title, type (`JsonSchemaType`), nullability (append `?`), format (when present), and for arrays “array of <ItemType>”.
+- Route diagrams: base view is hub + routes (no HTTP verbs); options can add operations and referenced schemas.
+- Keep diagrams readable: avoid noisy edge labels by default; provide options for verbosity when needed.
+
+### Error handling & diagnostics
+
+- Return `Error` with actionable messages and context (e.g., JSON pointer, path, or operation id).
+- Avoid silent failures; prefer explicit error propagation via `Result`.
+
+### Testing
+
+- Unit tests: NUnit 4; property-based tests with `FsCheck` where valuable; snapshot tests with `Verify.NUnit` for DOT/SVG/IR outputs.
+- Integration tests: end-to-end CLI tests should `dotnet build` the tool and then `dotnet run --no-build`.
+- Tests must cover nullable handling, references, arrays, compositions, and large-spec edge cases.
+
+### Performance & reliability
+
+- Avoid unnecessary copies of OpenAPI models; prefer references and interface-based traversal.
+- Keep allocations in hot paths low; avoid repeated parsing; cache visited schemas.
+
+### Repo hygiene
+
+- All PRs must be green: `dotnet build` and `dotnet test` for the solution.
+- Follow these rules in code reviews; do not approve changes that violate ROP, Result usage, or F# style guidance above.
+
+
