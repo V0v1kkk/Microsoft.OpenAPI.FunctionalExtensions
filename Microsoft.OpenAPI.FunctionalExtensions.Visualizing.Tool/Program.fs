@@ -7,6 +7,7 @@ open Microsoft.OpenAPI.FunctionalExtensions.OpenApiMerge
 open System.IO
 open Microsoft.OpenApi
 open Microsoft.OpenAPI.FunctionalExtensions.OpenApiScissors
+open Microsoft.OpenAPI.FunctionalExtensions.OpenApiWriterTools
 
 type SchemaArgs =
   | [<Mandatory>] Input of path:string
@@ -128,15 +129,8 @@ let main argv =
       match mergeFiles (inputs |> List.ofSeq) with
       | Error e -> eprintfn "%A" e; 2
       | Ok doc ->
-          // inline save (avoid depending on core writer helpers)
-          let ext = Path.GetExtension(outp).ToLowerInvariant()
-          use sw = new StreamWriter(outp)
-          if ext = ".json" then
-            let w = new OpenApiJsonWriter(sw)
-            doc.SerializeAsV3(w); sw.Flush(); 0
-          else
-            let w = new OpenApiYamlWriter(sw)
-            doc.SerializeAsV3(w); sw.Flush(); 0
+          saveDocument doc outp
+          0
   | Schema_Collect args ->
       let input = args.GetResult(<@ CollectArgs.Input @>)
       let outp = args.GetResult(<@ CollectArgs.Out @>)
@@ -221,7 +215,5 @@ let main argv =
       | Ok doc ->
           let opts: ScissorsOptions = { ScissorsOptions.Empty with IncludeTags = tags; IncludePaths = paths; IncludeOperationIds = ops; Transitive = trans }
           let cut = cutDocument doc opts
-          let ext = Path.GetExtension(outp).ToLowerInvariant()
-          use sw = new StreamWriter(outp)
-          if ext = ".json" then let w = new OpenApiJsonWriter(sw) in cut.SerializeAsV3(w); sw.Flush(); 0
-          else let w = new OpenApiYamlWriter(sw) in cut.SerializeAsV3(w); sw.Flush(); 0
+          saveDocument cut outp
+          0
