@@ -7,17 +7,23 @@
 
     <PropertyGroup>
         <PackageId>Functional.Microsoft.OpenAPI.Extensions</PackageId>
+        <Version>0.2.0-alpha</Version>
+        <Authors>Vladimir</Authors>
+        <Description>F# functional extensions for Microsoft.OpenApi: null-safe adapters, active patterns, schema graph traversal, route map extraction, spec merging, and subsetting.</Description>
+        <PackageTags>openapi;fsharp;functional;traversal;visualization;merge;scissors</PackageTags>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
         <PackageLicenseExpression>MIT</PackageLicenseExpression>
-        <Version>0.0.1-alpha</Version>
-        <Authors>Vladimir Rogozhin</Authors>
-        <Description>
-            Experimental F# adapter for Microsoft.OpenAPI 
-        </Description>
+        <RepositoryUrl>https://github.com/user/Microsoft.OpenAPI.FunctionalExtensions</RepositoryUrl>
+        <RepositoryType>git</RepositoryType>
     </PropertyGroup>
 
     <ItemGroup>
       <PackageReference Include="Microsoft.OpenApi" Version="3.6.0" />
       <PackageReference Include="Microsoft.OpenApi.YamlReader" Version="3.6.0" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <None Include="../README.md" Pack="true" PackagePath="/" />
     </ItemGroup>
 
     <ItemGroup>

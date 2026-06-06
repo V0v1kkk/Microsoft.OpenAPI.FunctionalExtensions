@@ -4,7 +4,13 @@
         <OutputType>Exe</OutputType>
         <TargetFramework>net9.0</TargetFramework>
         <PackAsTool>true</PackAsTool>
-        <ToolCommandName>openapi-visualizer</ToolCommandName>
+        <PackageId>Functional.Microsoft.OpenAPI.Extensions.Tool</PackageId>
+        <Version>0.2.0-alpha</Version>
+        <ToolCommandName>openapi-fx</ToolCommandName>
+        <Authors>Vladimir</Authors>
+        <Description>CLI tool for OpenAPI schema visualization, merge, and scissors operations.</Description>
+        <PackageTags>openapi;fsharp;cli;visualization;merge</PackageTags>
+        <PackageLicenseExpression>MIT</PackageLicenseExpression>
         <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
     </PropertyGroup>
 
