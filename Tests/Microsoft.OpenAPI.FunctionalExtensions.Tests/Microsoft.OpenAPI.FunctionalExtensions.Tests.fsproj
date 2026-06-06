@@ -24,6 +24,7 @@
         <Compile Include="AdapterCoreTests.fs" />
         <Compile Include="SchemaAdaptersTests.fs" />
         <Compile Include="ScissorsTests.fs" />
+        <Compile Include="MergeSpecsTests.fs" />
         <Compile Include="AdaptersTests.fs" />
         <Compile Include="SnapshotTests.fs" />
         <Compile Include="MultiVersionReadingTests.fs" />

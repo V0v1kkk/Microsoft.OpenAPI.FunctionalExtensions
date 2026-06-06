@@ -2,7 +2,6 @@ module Microsoft.OpenAPI.FunctionalExtensions.OpenApiWriterTools
 
 open System.IO
 open Microsoft.OpenApi
-open Microsoft.OpenApi.Writers
 
 let saveDocument (doc: OpenApiDocument) (outPath: string) =
     use sw = new StreamWriter(outPath)

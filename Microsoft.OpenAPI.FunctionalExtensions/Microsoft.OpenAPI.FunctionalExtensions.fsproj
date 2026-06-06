@@ -39,6 +39,7 @@
       <Compile Include="OpenApiOperationsTraversal.fs" />
       <Compile Include="OpenApiMerge.fs" />
       <Compile Include="OpenApiScissors.fs" />
+      <Compile Include="OpenApiWriterTools.fs" />
     </ItemGroup>
 
 </Project>
