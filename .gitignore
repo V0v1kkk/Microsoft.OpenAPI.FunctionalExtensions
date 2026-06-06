@@ -20,6 +20,7 @@ bin
 
 # Private / local-only
 IdeasSource/
+Playground/
 out/
 PLAN.md
 MIGRATION-NOTES-v2.md
