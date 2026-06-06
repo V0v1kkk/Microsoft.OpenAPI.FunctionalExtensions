@@ -2,7 +2,7 @@ module Microsoft.OpenAPI.FunctionalExtensions.Visualizing.GraphvizExport
 
 open Rubjerg.Graphviz
 open Microsoft.OpenApi
-open OpenApiTraversal
+open Microsoft.OpenAPI.FunctionalExtensions.Visualizing.SchemaGraph
 open OpenApiOperationsTraversal
 
 let private safeId (s: string) =
