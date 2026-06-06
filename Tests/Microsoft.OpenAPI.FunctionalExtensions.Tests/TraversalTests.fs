@@ -15,4 +15,24 @@ let ``Collect schema graph from petstore components`` () =
         Assert.That(g.Edges.Count, Is.GreaterThanOrEqualTo(0))
     | Error e -> Assert.Fail($"Failed to read spec: %A{e}")
 
+[<Test>]
+let ``Schema graph node Nullable reflects JsonSchemaType.Null flag`` () =
+    let nullableSchema =
+        OpenApiSchema(Type = System.Nullable(JsonSchemaType.String ||| JsonSchemaType.Null))
+        :> IOpenApiSchema
+
+    let nonNullableSchema =
+        OpenApiSchema(Type = System.Nullable JsonSchemaType.String) :> IOpenApiSchema
+
+    let nullableNode =
+        collectSchemaGraph nullableSchema
+        |> fun g -> g.Nodes |> Seq.exactlyOne
+
+    let nonNullableNode =
+        collectSchemaGraph nonNullableSchema
+        |> fun g -> g.Nodes |> Seq.exactlyOne
+
+    Assert.That(nullableNode.Nullable, Is.EqualTo(Some true))
+    Assert.That(nonNullableNode.Nullable, Is.EqualTo(Some false))
+
 

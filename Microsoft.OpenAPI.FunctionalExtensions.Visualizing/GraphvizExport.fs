@@ -24,11 +24,6 @@ let private prettySchemaLabel (id: string) =
 let private tryFindNode (g: SchemaGraph) (id: string) =
   g.Nodes |> Seq.tryFind (fun n -> n.Id = id)
 
-let private hasNullFlag (kindOpt: string option) =
-  match kindOpt with
-  | Some k when k.IndexOf("Null", System.StringComparison.OrdinalIgnoreCase) >= 0 -> true
-  | _ -> false
-
 let private cleanKind (kindOpt: string option) =
   match kindOpt with
   | None -> None
@@ -55,7 +50,7 @@ let rec private computeTypeLabel (g: SchemaGraph) (id: string) : string =
   let hasArrayEdge = g.Edges |> Seq.exists (fun e -> e.FromId = id && (match e.EdgeKind with | ArrayItem -> true | _ -> false))
   let isArrayNode =
     hasArrayEdge || (nOpt |> Option.bind (fun n -> n.Kind) |> Option.exists (fun k -> k.IndexOf("Array", System.StringComparison.OrdinalIgnoreCase) >= 0))
-  let nullableMark = if nOpt |> Option.exists (fun n -> hasNullFlag n.Kind) then "?" else ""
+  let nullableMark = if nOpt |> Option.exists (fun n -> n.Nullable = Some true) then "?" else ""
   if isArrayNode then
     // find first ArrayItem edge and compute child type
     let childOpt = g.Edges |> Seq.tryFind (fun e -> e.FromId = id && match e.EdgeKind with | ArrayItem -> true | _ -> false) |> Option.map (fun e -> e.ToId)

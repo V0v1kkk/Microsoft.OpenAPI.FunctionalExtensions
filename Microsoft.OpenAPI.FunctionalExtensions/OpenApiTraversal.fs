@@ -61,7 +61,7 @@ let private addNode (graph: SchemaGraph) (id: SchemaNodeRef) (schema: IOpenApiSc
     Kind =
       Microsoft.OpenAPI.FunctionalExtensions.SchemaAdapters.schemaType schema
       |> Option.map string
-    Nullable = None // v2 uses JsonSchemaType flags including Null; compute later in label
+    Nullable = Some (Microsoft.OpenAPI.FunctionalExtensions.SchemaAdapters.schemaIsNullable schema)
     Description = Microsoft.OpenAPI.FunctionalExtensions.SchemaAdapters.schemaDescription schema
     Format = Microsoft.OpenAPI.FunctionalExtensions.SchemaAdapters.schemaFormat schema
     ReadOnly = Some (Microsoft.OpenAPI.FunctionalExtensions.SchemaAdapters.schemaReadOnly schema)
