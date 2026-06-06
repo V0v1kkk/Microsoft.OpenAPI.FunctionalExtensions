@@ -1,0 +1,50 @@
+openapi: 3.0.3
+info:
+  title: Links Request Body API
+  version: 1.0.0
+paths:
+  /orders:
+    post:
+      operationId: createOrder
+      summary: Create an order
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                orderId:
+                  type: string
+      responses:
+        '201':
+          description: Created
+          links:
+            FulfillOrder:
+              operationId: fulfillOrder
+              requestBody: '$request.body#/orderId'
+              description: Fulfill the created order
+  /orders/{orderId}/fulfill:
+    post:
+      operationId: fulfillOrder
+      summary: Fulfill an order
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Fulfilled
+  /events:
+    post:
+      operationId: emitEvent
+      summary: Emit event without operationId on link target
+      responses:
+        '200':
+          description: OK
+          links:
+            BrokenLink:
+              parameters:
+                id: '$request.body#/id'
+              description: Link without operationId should be skipped

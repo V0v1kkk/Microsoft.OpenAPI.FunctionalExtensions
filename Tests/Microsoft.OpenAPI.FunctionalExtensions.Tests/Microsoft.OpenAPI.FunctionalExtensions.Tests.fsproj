@@ -61,6 +61,18 @@
       <Content Include="Specifications\links-example.yaml">
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </Content>
+      <Content Include="Specifications\links-request-body.yaml">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </Content>
+      <Content Include="Specifications\merge-base.yaml">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </Content>
+      <Content Include="Specifications\merge-conflict-path.yaml">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </Content>
+      <Content Include="Specifications\merge-conflict-schema.yaml">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </Content>
       <Content Include="Specifications\examples-validation.yaml">
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </Content>

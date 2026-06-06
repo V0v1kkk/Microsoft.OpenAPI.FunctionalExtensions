@@ -81,3 +81,26 @@ let ``Petstore returns empty links graph`` () =
         let graph = collectLinksGraph doc
         Assert.That(graph.Links, Is.Empty)
         Assert.That(graph.Operations, Is.Empty)
+
+[<Test>]
+let ``Request body link source and target are parsed correctly`` () =
+    match readSpecification "Specifications/links-request-body.yaml" with
+    | Error e -> Assert.Fail($"Failed to read spec: %A{e}")
+    | Ok doc ->
+        let graph = collectLinksGraph doc
+
+        let fulfillLink =
+            graph.Links |> List.find (fun link -> link.LinkName = "FulfillOrder")
+
+        Assert.That(fulfillLink.Source, Is.EqualTo(RequestBody "orderId"))
+        Assert.That(fulfillLink.Target, Is.EqualTo(RequestBodyField "/"))
+        Assert.That(fulfillLink.SourceOperationId, Is.EqualTo("createOrder"))
+        Assert.That(fulfillLink.TargetOperationId, Is.EqualTo("fulfillOrder"))
+
+[<Test>]
+let ``Link without operationId is skipped`` () =
+    match readSpecification "Specifications/links-request-body.yaml" with
+    | Error e -> Assert.Fail($"Failed to read spec: %A{e}")
+    | Ok doc ->
+        let graph = collectLinksGraph doc
+        Assert.That(graph.Links |> List.exists (fun link -> link.LinkName = "BrokenLink"), Is.False)

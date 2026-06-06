@@ -84,3 +84,41 @@ let ``cut with no matches yields empty spec`` () =
         Assert.That(cut.Paths = null || cut.Paths.Count = 0, Is.True)
         Assert.That(cut.Components = null || cut.Components.Schemas = null || cut.Components.Schemas.Count = 0, Is.True)
 
+[<Test>]
+let ``cut transitive includes allOf composition schemas for getUser`` () =
+    match readSpecification "Specifications/medium-complex.yaml" with
+    | Error e -> Assert.Fail($"Failed to read: %A{e}")
+    | Ok doc ->
+        let opts = { ScissorsOptions.Empty with IncludeOperationIds = [ "getUser" ]; Transitive = true }
+        let cut = cutDocument doc opts
+
+        Assert.That(cut.Components.Schemas.ContainsKey("User"), Is.True)
+        Assert.That(cut.Components.Schemas.ContainsKey("Identifiable"), Is.True)
+        Assert.That(cut.Components.Schemas.ContainsKey("Timestamped"), Is.True)
+
+[<Test>]
+let ``cut transitive includes oneOf composition schemas for createProduct`` () =
+    match readSpecification "Specifications/medium-complex.yaml" with
+    | Error e -> Assert.Fail($"Failed to read: %A{e}")
+    | Ok doc ->
+        let opts = { ScissorsOptions.Empty with IncludeOperationIds = [ "createProduct" ]; Transitive = true }
+        let cut = cutDocument doc opts
+
+        Assert.That(cut.Components.Schemas.ContainsKey("Product"), Is.True)
+        Assert.That(cut.Components.Schemas.ContainsKey("ProductCategory"), Is.True)
+        Assert.That(cut.Components.Schemas.ContainsKey("CategoryLeaf"), Is.True)
+        Assert.That(cut.Components.Schemas.ContainsKey("CategoryBranch"), Is.True)
+
+[<Test>]
+let ``cut transitive follows reference chain A to B to C`` () =
+    match readSpecification "Specifications/medium-complex.yaml" with
+    | Error e -> Assert.Fail($"Failed to read: %A{e}")
+    | Ok doc ->
+        let opts = { ScissorsOptions.Empty with IncludeOperationIds = [ "getOrder" ]; Transitive = true }
+        let cut = cutDocument doc opts
+
+        Assert.That(cut.Components.Schemas.ContainsKey("Order"), Is.True)
+        Assert.That(cut.Components.Schemas.ContainsKey("Identifiable"), Is.True)
+        Assert.That(cut.Components.Schemas.ContainsKey("Timestamped"), Is.True)
+        Assert.That(cut.Components.Schemas.ContainsKey("Money"), Is.True)
+

@@ -353,3 +353,8 @@ components:
         message: { type: string }
         details: { type: array, items: { type: string } }
         traceId: { type: string }
+    FlexibleValue:
+      anyOf:
+        - { type: string }
+        - { type: number }
+        - { type: boolean }
