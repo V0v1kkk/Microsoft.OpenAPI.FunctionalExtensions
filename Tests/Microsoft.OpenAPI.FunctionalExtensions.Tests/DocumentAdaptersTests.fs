@@ -62,7 +62,9 @@ let ``documentPaths returns petstore paths from specification file`` () =
             |> List.map fst
             |> List.sort
 
-        Assert.That(paths = [ "/pets"; "/pets/{petId}" ], Is.True)
+        let petByIdPath = "/pets/" + "{petId}"
+        let expectedPaths: string list = [ "/pets"; petByIdPath ]
+        Assert.That(paths, Is.EqualTo<string list> expectedPaths)
 
 [<Test>]
 let ``allOperations returns expected count from petstore`` () =
@@ -77,7 +79,8 @@ let ``allOperations returns expected count from petstore`` () =
             |> List.map (fun (_, _, operation) -> operation.OperationId)
             |> List.sort
 
-        Assert.That(operationIds = [ "createPets"; "listPets"; "showPetById" ], Is.True)
+        let expectedOperationIds: string list = [ "createPets"; "listPets"; "showPetById" ]
+        Assert.That(operationIds, Is.EqualTo<string list> expectedOperationIds)
 
 [<Test>]
 let ``tryExtensionString returns existing extension value`` () =

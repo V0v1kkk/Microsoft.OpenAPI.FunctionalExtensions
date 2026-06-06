@@ -34,6 +34,8 @@
       <Compile Include="OpenApiSchemaAdapters.fs" />
       <Compile Include="OpenApiReferenceAdapters.fs" />
       <Compile Include="OpenApiOperationAdapters.fs" />
+      <Compile Include="OpenApiDocumentAdapters.fs" />
+      <Compile Include="OpenApiExtensionAdapters.fs" />
       <Compile Include="OpenApiAdapters.fs" />
       <Compile Include="OpenApiTraversal.fs" />
       <Compile Include="OpenApiOperationsTraversal.fs" />
