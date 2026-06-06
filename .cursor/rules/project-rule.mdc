@@ -28,16 +28,18 @@ This document defines the mandatory engineering rules for this repository. It co
 - Control flow: guard clauses and early returns; avoid deep nesting; keep functions small and focused.
 - Comments: explain the “why”, not the “how”; avoid redundant comments; no TODOs—implement or create an issue.
 
-### OpenAPI.NET v2.0 specifics (mandatory)
+### OpenAPI.NET v3.x specifics (mandatory)
 
-- Use `Microsoft.OpenApi` v2.0.0 APIs.
+- Use `Microsoft.OpenApi` v3.6+ APIs.
   - Prefer interfaces: `IOpenApiSchema`, `IOpenApiParameter`, `IOpenApiPathItem`, etc.
   - HTTP methods are `System.Net.Http.HttpMethod` (not `OperationType`).
   - Schema types are `JsonSchemaType` flags. Nullability is represented via `JsonSchemaType.Null` (no `Nullable` bool on schema).
   - Any/extension values are `JsonNode`/`JsonNodeExtension`. Use the JsonNode-based helpers in `OpenApiTools` (`tryGetValue`, `getExtensionValue`).
-  - Readers: use `OpenApiDocument.Parse/Load/LoadAsync`. For YAML, register the YAML reader via `OpenApiReaderSettingsExtensions.AddYamlReader`.
-  - References use `OpenApi*Reference` wrappers; do not assume concrete instances. Prefer working against `IOpenApi*` and pattern matching on concrete types only when necessary.
-  - Collections may be null—handle with pattern matching (`match x with null -> ...`).
+  - Content dictionaries use `IDictionary<string, IOpenApiMediaType>` (interfaces, not concrete types).
+  - Readers: use `OpenApiDocument.Load/LoadAsync`. For YAML, register the YAML reader via `OpenApiReaderSettingsExtensions.AddYamlReader`.
+  - References use `OpenApiSchemaReference` / `OpenApi*Reference` wrappers; do not assume concrete instances. Use adapter modules (`ReferenceAdapters`, `SchemaAdapters`) for null-safe decomposition.
+  - Collections may be null—use `AdapterCore.ofObj`, `readMap`, `readSeq` for null-safe access.
+  - Prefer the project's adapter modules (`OpenApiAdapterCore`, `OpenApiActivePatterns`, `SchemaAdapters`, `ReferenceAdapters`, `OperationAdapters`, `DocumentAdapters`, `ExtensionAdapters`) over direct null checks.
 
 ### Traversal & IR
 

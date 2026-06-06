@@ -1,108 +1,149 @@
-## Microsoft.OpenAPI.FunctionalExtensions
+# Functional.Microsoft.OpenAPI.Extensions
 
-Functional F# utilities and tools on top of Microsoft.OpenApi for traversing, analyzing, and visualizing OpenAPI specifications. This README is in English per project preference [[memory:5983738]].
+F# functional-first extensions for [Microsoft.OpenApi](https://github.com/microsoft/OpenAPI.NET) v3.x. Null-safe adapters, active patterns, schema graph traversal, route map extraction, spec merging, and subsetting.
 
-### Overview
+> **Pre-release:** packages are currently published at `0.2.0-alpha`. APIs may change before a stable `1.0` release.
 
-- Core library: traversal helpers for schemas (incl. allOf/oneOf/anyOf) and operations; ROP-style flows using FSharp.Core `Result` + helpers in `ResultEx`.
-- Functional Adapters (public API): `OpenApiAdapters` — null-safe, functional helpers over Microsoft.OpenApi v2.0 models (safe enumerations, folds, schema reference helpers).
-- Visualization: Graphviz SVG export using `Rubjerg.Graphviz`.
-- CLI: quick routes/schemas visualizations for large specs.
+## Features
 
-Inspiration and target UX come from the reference ideas in `IdeasSource/GraphVisualization/`:
-- TypeScript-based route visualization: `IdeasSource/GraphVisualization/ApiMapperJs/`
-- Graphviz-based schema visualization: `IdeasSource/GraphVisualization/openapischematograph-master/`
+- **Null-safe adapters** — total functions over `IOpenApi*` interfaces; no null-reference surprises on paths, operations, schemas, references, or extensions
+- **Active patterns** — declarative schema decomposition (`SchemaRef`, `ArraySchema`, `ObjectSchema`, `ComposedSchema`) for clean `match` expressions
+- **Schema graph traversal** — build renderer-agnostic `SchemaGraph` IR with cycle detection across `allOf`/`oneOf`/`anyOf`, properties, and arrays
+- **Route map extraction** — collect per-operation routes with parameter, request, and response schema references
+- **Spec merging** — combine multiple OpenAPI documents into one (first-wins conflict resolution)
+- **Spec subsetting (scissors)** — filter operations by tag, path, or operation id; optionally copy transitive component schemas
+- **Graphviz visualization** — export schema graphs and route maps to DOT or SVG
+- **CLI tool** — `openapi-fx` for visualization, IR collection, merge, and scissors from the command line
+- **Railway-oriented programming** — `Result`-based loaders and transforms composed via `ResultEx` helpers
 
-We will mirror those UX patterns: base view shows route hub + routes only; optional layers add operations and referenced schemas.
+## Packages
 
-### Quick start
+| Package | Description |
+|---------|-------------|
+| [Functional.Microsoft.OpenAPI.Extensions](https://www.nuget.org/packages/Functional.Microsoft.OpenAPI.Extensions) | Core library — adapters, traversal, merge, scissors |
+| [Functional.Microsoft.OpenAPI.Extensions.Visualizing](https://www.nuget.org/packages/Functional.Microsoft.OpenAPI.Extensions.Visualizing) | Graphviz DOT/SVG export for schema graphs and route maps |
+| [Functional.Microsoft.OpenAPI.Extensions.Tool](https://www.nuget.org/packages/Functional.Microsoft.OpenAPI.Extensions.Tool) | Global CLI tool (`openapi-fx`) |
 
-Prereqs: .NET 9 SDK. This repo includes a small sample `Samples/petstore.yaml`.
+## Quick Start
 
-Build and test:
+### Installation
 
 ```bash
-dotnet build Microsoft.OpenAPI.FunctionalExtensions.sln
-dotnet test  Microsoft.OpenAPI.FunctionalExtensions.sln
+dotnet add package Functional.Microsoft.OpenAPI.Extensions --version 0.2.0-alpha
 ```
 
-### CLI usage (Visualizing.Tool)
-
-Render schema graph to SVG (works from any directory):
+Optional visualization package:
 
 ```bash
-dotnet run --project /home/vladimir/GitRoot/F/Microsoft.OpenAPI.FunctionalExtensions/Microsoft.OpenAPI.FunctionalExtensions.Visualizing.Tool -- \
-  --schema-svg --input /home/vladimir/GitRoot/F/Microsoft.OpenAPI.FunctionalExtensions/Samples/petstore.yaml --out /home/vladimir/GitRoot/F/Microsoft.OpenAPI.FunctionalExtensions/out/schema.svg
+dotnet add package Functional.Microsoft.OpenAPI.Extensions.Visualizing --version 0.2.0-alpha
 ```
 
-Render route map to SVG (base: hub + routes only; works from any directory):
+### Basic Usage
 
-```bash
-dotnet run --project /home/vladimir/GitRoot/F/Microsoft.OpenAPI.FunctionalExtensions/Microsoft.OpenAPI.FunctionalExtensions.Visualizing.Tool -- \
-  --route-svg --input /home/vladimir/GitRoot/F/Microsoft.OpenAPI.FunctionalExtensions/Samples/petstore.yaml --out /home/vladimir/GitRoot/F/Microsoft.OpenAPI.FunctionalExtensions/out/routes.svg
+```fsharp
+open Microsoft.OpenAPI.FunctionalExtensions.OpenApiReaderTools
+open OpenApiTraversal
+open OpenApiOperationsTraversal
+
+let specPath = "Samples/petstore.yaml"
+
+match readSpecification specPath with
+| Error err -> printfn "Failed to load: %A" err
+| Ok doc ->
+    let graph = collectDocumentSchemas doc
+    let routes = collectRouteMap doc
+    printfn "Schema nodes: %d, edges: %d" graph.Nodes.Count graph.Edges.Count
+    printfn "Routes: %d" routes.Routes.Count
 ```
 
-Collect Schema Graph IR (JSON):
+## CLI Tool
+
+### Installation
 
 ```bash
-dotnet run --project Microsoft.OpenAPI.FunctionalExtensions.Visualizing.Tool -- \
-  --schema-collect --input Samples/petstore.yaml --out out/schema.json
+dotnet tool install --global Functional.Microsoft.OpenAPI.Extensions.Tool --version 0.2.0-alpha
 ```
 
-Collect Route Map IR (JSON):
+After installation, the command is `openapi-fx`. You can also run from source without installing:
 
 ```bash
-dotnet run --project Microsoft.OpenAPI.FunctionalExtensions.Visualizing.Tool -- \
-  --route-collect --input Samples/petstore.yaml --out out/routes.json
+dotnet run --project Microsoft.OpenAPI.FunctionalExtensions.Visualizing.Tool/ -- <flags>
 ```
 
-Merge multiple specifications (experimental):
+### Commands
+
+| Command | Description |
+|---------|-------------|
+| `--schema-svg` | Render the full schema graph (or a single component with `--component`) to SVG; add `--dot` for DOT output |
+| `--route-svg` | Render a hub-and-spoke route map to SVG |
+| `--schema-collect` | Export schema graph IR as JSON |
+| `--route-collect` | Export route map IR as JSON |
+| `--merge` | Merge multiple specs into one document (repeat `--input` for each file) |
+| `--scissors` | Cut a subset by `--include-tag`, `--include-path`, and/or `--include-operation` |
+
+Route diagram options: `--center`, `--include-operations`, `--include-schemas`.
+
+### Examples
+
+Render a schema graph to SVG:
 
 ```bash
-dotnet run --project Microsoft.OpenAPI.FunctionalExtensions.Visualizing.Tool -- \
-  --merge --input Samples/petstore.yaml --input Samples/petstore-extended.yaml --out out/merged.yaml
+openapi-fx --schema-svg --input Samples/petstore.yaml --out out/schema.svg
 ```
 
-Cut (scissors) a subset of a spec by tags/paths/operation ids:
+Render a route map with operations and referenced schemas:
 
 ```bash
-dotnet run --project Microsoft.OpenAPI.FunctionalExtensions.Visualizing.Tool -- \
-  --scissors --input Samples/petstore.yaml --out out/cut.yaml \
-  --include-tag pets --include-path /pets --include-operation showPetById
-```
-
-Advanced route options:
-
-```bash
-# Custom hub label
---center "Petstore API"
-
-# Add operation nodes under each route
---include-operations
-
-# Add referenced schema nodes (parameters/request/responses)
---include-schemas
-
-# Example (all options):
-dotnet run --project Microsoft.OpenAPI.FunctionalExtensions.Visualizing.Tool -- \
-  --route-svg --input Samples/petstore.yaml --out out/routes_full.svg \
+openapi-fx --route-svg --input Samples/petstore.yaml --out out/routes.svg \
   --center "Petstore API" --include-operations --include-schemas
 ```
 
-Notes:
-- Schema labels omit noisy prefixes (e.g., `#/components/schemas/Person` → `Person`).
-- Property nodes include: type; arrays are shown as `array[Type]`; nullability marker `?`; format (when present); readOnly marker; enum values.
-- Edges are unlabeled in SVG for readability; DOT/IR include edge kinds.
-- Route IR tracks `ReturnsArray`, `ReturnsArrayViaData`, `HasOperations` for future highlighting.
+Cut a spec to pets-related operations and save the result:
 
-### Roadmap (visualization)
+```bash
+openapi-fx --scissors --input Samples/petstore.yaml --out out/cut.yaml \
+  --include-tag pets --include-path /pets --include-operation showPetById
+```
 
-- Align route layout and annotations with the TypeScript prototype (hub, per-path nodes; optional operations; optional schema links).
-- Expand schema reference discovery across all operation parts (params, request bodies, responses, headers, callbacks, links, etc.).
-- Snapshot tests for DOT and IR JSON via Verify.
+## Architecture
 
-### License
+The library is organized in layers with a strict separation between data collection (IR) and rendering:
+
+```
+AdapterCore
+    ↓
+ActivePatterns → SchemaAdapters / ReferenceAdapters / OperationAdapters /
+                 DocumentAdapters / ExtensionAdapters
+    ↓
+OpenApiAdapters (aggregate traversal helpers)
+    ↓
+OpenApiTraversal          → SchemaGraph IR (nodes, edges, cycle-safe)
+OpenApiOperationsTraversal → RouteMap IR (paths, methods, schema refs)
+    ↓
+OpenApiMerge / OpenApiScissors / OpenApiWriterTools
+    ↓
+Visualizing (GraphvizExport) → DOT / SVG rendering only
+```
+
+- **Adapters** convert nullable OpenAPI.NET collections and properties into F# `option`, `Map`, `list`, and `Set` at the API boundary.
+- **Traversal modules** produce renderer-agnostic intermediate representation; they never contain Graphviz or display logic.
+- **Visualizing** consumes IR exclusively — schema node labels include type, nullability, format, and composition; route diagrams default to hub + routes with optional operation and schema layers.
+
+All public workflows return `Result<_,_>` (railway-oriented programming). Compose with `Result.bind` and helpers in `ResultEx`.
+
+## Requirements
+
+- .NET 9.0+
+- [Microsoft.OpenApi](https://www.nuget.org/packages/Microsoft.OpenApi) 3.6+ (with `Microsoft.OpenApi.YamlReader` for YAML input)
+- For SVG rendering: [Graphviz](https://graphviz.org/) (`dot` executable in `PATH`)
+
+## Building from Source
+
+```bash
+dotnet build
+dotnet test
+```
+
+## License
 
 MIT
-
-

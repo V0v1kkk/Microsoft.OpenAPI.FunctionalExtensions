@@ -17,3 +17,12 @@ bin
 .idea/
 .fake
 .agents/skills/
+
+# Private / local-only
+IdeasSource/
+out/
+PLAN.md
+MIGRATION-NOTES-v2.md
+
+# Verify snapshots tooling
+*.received.*
