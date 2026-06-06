@@ -21,12 +21,22 @@
         <Compile Include="TraversalTests.fs" />
         <Compile Include="OperationsTraversalTests.fs" />
       <Compile Include="OpenApiSchemaAnalysisTests.fs" />
+        <Compile Include="ScissorsTests.fs" />
+        <Compile Include="AdaptersTests.fs" />
         <Compile Include="Program.fs" />
         <Content Include="Specifications\petstore.yaml">
           <CopyToOutputDirectory>Always</CopyToOutputDirectory>
         </Content>
       <Content Include="Specifications\e-shop-example.yaml">
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </Content>
+      <Content Include="..\..\Samples\petstore.yaml">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        <Link>Samples\petstore.yaml</Link>
+      </Content>
+      <Content Include="..\..\Samples\petstore-extended.yaml">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        <Link>Samples\petstore-extended.yaml</Link>
       </Content>
     </ItemGroup>
 
