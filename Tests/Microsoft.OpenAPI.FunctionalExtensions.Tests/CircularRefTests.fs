@@ -61,21 +61,21 @@ let private collectChildIdsWithVisited (root: IOpenApiSchema) (rootPointer: stri
     walk rootPointer root
     ids |> Seq.toList
 
-[<Test; Timeout(5000)>]
+[<Test; MaxTime(5000)>]
 let ``collectDocumentSchemas with circular refs completes within timeout`` () =
     let doc = loadCircularRefs ()
     let graph = collectDocumentSchemas doc
     Assert.That(graph.Nodes.Count, Is.GreaterThan(0))
     Assert.That(graph.Nodes.Count, Is.LessThan(50))
 
-[<Test; Timeout(5000)>]
+[<Test; MaxTime(5000)>]
 let ``collectDocumentSchemas yields exactly one TreeNode node for self-reference`` () =
     let doc = loadCircularRefs ()
     let graph = collectDocumentSchemas doc
     let treeNodes = nodesWithId graph treeNodePointer
     Assert.That(treeNodes.Length, Is.EqualTo(1))
 
-[<Test; Timeout(5000)>]
+[<Test; MaxTime(5000)>]
 let ``collectRouteMap works with circular-ref schemas`` () =
     let doc = loadCircularRefs ()
     let routeMap = collectRouteMap doc
@@ -85,7 +85,7 @@ let ``collectRouteMap works with circular-ref schemas`` () =
     Assert.That(route.OperationId, Is.EqualTo(Some "listNodes"))
     Assert.That(route.ReturnsArray, Is.True)
 
-[<Test; Timeout(5000)>]
+[<Test; MaxTime(5000)>]
 let ``cutDocument with transitive on circular-ref spec completes within timeout`` () =
     let doc = loadCircularRefs ()
     let opts = { ScissorsOptions.Empty with IncludeOperationIds = [ "listNodes" ] }
@@ -93,7 +93,7 @@ let ``cutDocument with transitive on circular-ref spec completes within timeout`
     Assert.That(cut.Paths.ContainsKey("/nodes"), Is.True)
     Assert.That(cut.Components.Schemas.ContainsKey("TreeNode"), Is.True)
 
-[<Test; Timeout(5000)>]
+[<Test; MaxTime(5000)>]
 let ``schemaChildren on self-referencing schema does not infinite-loop`` () =
     let doc = loadCircularRefs ()
     let treeNode = doc.Components.Schemas.["TreeNode"]
@@ -101,7 +101,7 @@ let ``schemaChildren on self-referencing schema does not infinite-loop`` () =
     Assert.That(childIds.Length, Is.GreaterThan(0))
     Assert.That(childIds |> List.filter ((=) treeNodePointer) |> List.length, Is.EqualTo(1))
 
-[<Test; Timeout(5000)>]
+[<Test; MaxTime(5000)>]
 let ``MutualA and MutualB produce exactly two nodes with cross edges`` () =
     let doc = loadCircularRefs ()
     let mutualA = doc.Components.Schemas.["MutualA"]

@@ -277,8 +277,10 @@ let rec private validateExampleCore
                                 properties
                                 |> Map.toList
                                 |> List.collect (fun (propertyName, propertySchema) ->
-                                    match jsonObject.TryGetPropertyValue propertyName with
-                                    | true, child when not (isNull child) ->
+                                    let mutable child = Unchecked.defaultof<JsonNode>
+
+                                    match jsonObject.TryGetPropertyValue(propertyName, &child) with
+                                    | true when not (isNull child) ->
                                         validateExampleCore
                                             document
                                             propertySchema
