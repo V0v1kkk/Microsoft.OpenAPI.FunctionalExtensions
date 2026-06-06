@@ -1,0 +1,163 @@
+openapi: 3.1.0
+info:
+  version: 1.0.0
+  title: Swagger Petstore (3.1)
+  license:
+    name: MIT
+jsonSchemaDialect: https://json-schema.org/draft/2020-12/schema
+servers:
+  - url: http://petstore.swagger.io/v1
+paths:
+  /pets:
+    get:
+      summary: List all pets
+      operationId: listPets
+      tags:
+        - pets
+      responses:
+        '200':
+          description: A paged array of pets
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Pets"
+    post:
+      summary: Create a pet
+      operationId: createPet
+      tags:
+        - pets
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NewPet"
+      responses:
+        '201':
+          description: Created pet
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Pet"
+  /pets/{petId}:
+    get:
+      summary: Info for a specific pet
+      operationId: showPetById
+      tags:
+        - pets
+      parameters:
+        - name: petId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Expected response to a valid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Pet"
+  /pets/locations:
+    get:
+      summary: List pet store locations as coordinate tuples
+      operationId: listPetLocations
+      tags:
+        - pets
+      responses:
+        '200':
+          description: Coordinate tuples
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LocationTuples"
+webhooks:
+  petCreated:
+    $ref: "#/components/pathItems/PetCreatedWebhook"
+components:
+  pathItems:
+    PetCreatedWebhook:
+      post:
+        operationId: inboundPetCreated
+        requestBody:
+          required: true
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PetEvent"
+        responses:
+          '200':
+            description: Acknowledge receipt
+  schemas:
+    Pet:
+      type: object
+      required:
+        - id
+        - name
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+        tag:
+          type:
+            - string
+            - "null"
+    NewPet:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+        tag:
+          type:
+            - string
+            - "null"
+    PetEvent:
+      type: object
+      $defs:
+        PetId:
+          type: string
+          pattern: "^[a-z0-9-]+$"
+      properties:
+        type:
+          type: string
+          const: pet.created
+        petId:
+          $ref: "#/$defs/PetId"
+        tag:
+          type:
+            - string
+            - "null"
+      required:
+        - type
+        - petId
+    LocationTuple:
+      type: array
+      prefixItems:
+        - type: number
+          description: latitude
+        - type: number
+          description: longitude
+      maxItems: 2
+    LocationTuples:
+      type: array
+      items:
+        $ref: "#/components/schemas/LocationTuple"
+    Pets:
+      type: array
+      items:
+        $ref: "#/components/schemas/Pet"
+    Error:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: integer
+          format: int32
+        message:
+          type: string

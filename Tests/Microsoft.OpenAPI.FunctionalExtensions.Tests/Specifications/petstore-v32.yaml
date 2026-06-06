@@ -1,0 +1,176 @@
+openapi: 3.2.0
+info:
+  version: 1.0.0
+  title: Swagger Petstore (3.2)
+  license:
+    name: MIT
+jsonSchemaDialect: https://json-schema.org/draft/2020-12/schema
+servers:
+  - url: http://petstore.swagger.io/v1
+tags:
+  - name: pets
+    summary: Pets
+    description: Pet management endpoints
+    kind: nav
+  - name: pets/detail
+    summary: Pet detail
+    description: Individual pet operations
+    parent: pets
+    kind: nav
+  - name: partners
+    summary: Partner APIs
+    description: Endpoints for external partners
+    kind: audience
+paths:
+  /pets:
+    get:
+      summary: List all pets
+      operationId: listPets
+      tags:
+        - pets
+      parameters:
+        - name: filter
+          in: querystring
+          description: Raw query string passed to the search backend
+          required: false
+          schema:
+            type: string
+      security:
+        - OAuthDeviceFlow:
+            - read
+      responses:
+        '200':
+          description: A paged array of pets
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Pets"
+  /pets/{petId}:
+    get:
+      summary: Info for a specific pet
+      operationId: showPetById
+      tags:
+        - pets/detail
+      parameters:
+        - name: petId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Expected response to a valid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Pet"
+  /pets/events:
+    get:
+      summary: Stream pet events as JSON Lines
+      operationId: streamPetEvents
+      tags:
+        - partners
+      security:
+        - OAuthDeviceFlow:
+            - stream
+      responses:
+        '200':
+          description: Streaming pet events
+          content:
+            application/jsonl:
+              $ref: "#/components/mediaTypes/PetEventJsonl"
+webhooks:
+  petCreated:
+    $ref: "#/components/pathItems/PetCreatedWebhook"
+components:
+  pathItems:
+    PetCreatedWebhook:
+      post:
+        operationId: inboundPetCreated
+        requestBody:
+          required: true
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PetEvent"
+        responses:
+          '200':
+            description: Acknowledge receipt
+  mediaTypes:
+    PetEventJsonl:
+      itemSchema:
+        $ref: "#/components/schemas/PetEvent"
+      examples:
+        sample:
+          summary: Two JSONL events
+          value: |
+            {"type":"pet.created","petId":"p-1","tag":null}
+            {"type":"pet.created","petId":"p-2","tag":"k9"}
+  securitySchemes:
+    OAuthDeviceFlow:
+      type: oauth2
+      description: Device Authorization Flow for CLI and TV clients
+      oauth2MetadataUrl: https://auth.petstore.example.com/.well-known/openid-configuration
+      flows:
+        deviceAuthorization:
+          authorizationUrl: https://auth.petstore.example.com/device
+          tokenUrl: https://auth.petstore.example.com/token
+          scopes:
+            read: Read pets
+            stream: Stream pet events
+  schemas:
+    Pet:
+      type: object
+      required:
+        - id
+        - name
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+        tag:
+          type:
+            - string
+            - "null"
+    PetEvent:
+      type: object
+      $defs:
+        PetId:
+          type: string
+          pattern: "^[a-z0-9-]+$"
+      properties:
+        type:
+          type: string
+          const: pet.created
+        petId:
+          $ref: "#/$defs/PetId"
+        tag:
+          type:
+            - string
+            - "null"
+      required:
+        - type
+        - petId
+    LocationTuple:
+      type: array
+      prefixItems:
+        - type: number
+        - type: number
+      maxItems: 2
+    Pets:
+      type: array
+      items:
+        $ref: "#/components/schemas/Pet"
+    Error:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: integer
+          format: int32
+        message:
+          type: string

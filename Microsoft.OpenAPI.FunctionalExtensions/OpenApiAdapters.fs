@@ -42,7 +42,7 @@ let schemaChildren (schema: IOpenApiSchema) : seq<IOpenApiSchema> =
         yield! each s.OneOf
         yield! each s.AnyOf }
 
-let schemasFromContent (content: IDictionary<string, OpenApiMediaType>) : seq<IOpenApiSchema> =
+let schemasFromContent (content: IDictionary<string, IOpenApiMediaType>) : seq<IOpenApiSchema> =
   seq {
     match content with
     | null -> ()

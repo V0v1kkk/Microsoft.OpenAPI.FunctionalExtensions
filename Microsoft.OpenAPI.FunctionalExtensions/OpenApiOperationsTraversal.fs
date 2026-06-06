@@ -35,7 +35,7 @@ let private schemaRefPointerFromInterface (schema: IOpenApiSchema) : string opti
       | :? OpenApiSchema as s when not (String.IsNullOrWhiteSpace s.Id) -> Some ($"#/components/schemas/{s.Id}")
       | _ -> None)
 
-let private collectSchemasFromContent (content: IDictionary<string, OpenApiMediaType>) : seq<string> =
+let private collectSchemasFromContent (content: IDictionary<string, IOpenApiMediaType>) : seq<string> =
   schemasFromContent content
   |> Seq.choose schemaRefPointerFromInterface
 

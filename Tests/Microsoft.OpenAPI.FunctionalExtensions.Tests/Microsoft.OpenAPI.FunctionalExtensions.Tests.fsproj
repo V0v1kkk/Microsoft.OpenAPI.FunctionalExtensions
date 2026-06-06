@@ -25,8 +25,18 @@
         <Compile Include="ScissorsTests.fs" />
         <Compile Include="AdaptersTests.fs" />
         <Compile Include="SnapshotTests.fs" />
+        <Compile Include="MultiVersionReadingTests.fs" />
         <Compile Include="Program.fs" />
         <Content Include="Specifications\petstore.yaml">
+          <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </Content>
+        <Content Include="Specifications\petstore-v30.yaml">
+          <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </Content>
+        <Content Include="Specifications\petstore-v31.yaml">
+          <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </Content>
+        <Content Include="Specifications\petstore-v32.yaml">
           <CopyToOutputDirectory>Always</CopyToOutputDirectory>
         </Content>
       <Content Include="Specifications\e-shop-example.yaml">

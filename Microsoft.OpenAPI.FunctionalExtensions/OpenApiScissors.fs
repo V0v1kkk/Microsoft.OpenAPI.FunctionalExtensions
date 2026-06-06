@@ -79,7 +79,7 @@ let rec private collectSchemaRefsFromSchema (doc: OpenApiDocument) (visited: Has
         let inline each (lst: IList<IOpenApiSchema>) = match lst with | null -> () | xs -> for x in xs do collectSchemaRefsFromSchema doc visited acc x
         each s.AllOf; each s.OneOf; each s.AnyOf
 
-let private collectSchemasFromContent (doc: OpenApiDocument) (acc: HashSet<string>) (content: IDictionary<string, OpenApiMediaType>) =
+let private collectSchemasFromContent (doc: OpenApiDocument) (acc: HashSet<string>) (content: IDictionary<string, IOpenApiMediaType>) =
   match content with
   | null -> ()
   | c ->
