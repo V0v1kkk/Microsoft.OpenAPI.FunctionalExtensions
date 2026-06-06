@@ -29,6 +29,7 @@
         <Compile Include="SchemaAdaptersTests.fs" />
         <Compile Include="DocumentAdaptersTests.fs" />
         <Compile Include="LintingTests.fs" />
+        <Compile Include="ExampleValidationTests.fs" />
         <Compile Include="ScissorsTests.fs" />
         <Compile Include="MergeSpecsTests.fs" />
         <Compile Include="AdaptersTests.fs" />
@@ -57,6 +58,9 @@
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </Content>
       <Content Include="Specifications\links-example.yaml">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </Content>
+      <Content Include="Specifications\examples-validation.yaml">
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </Content>
       <Content Include="..\..\Samples\petstore.yaml">

@@ -13,6 +13,7 @@ let defaultRules: LintRule list = [
     Rules.missingResponseDescription
     Rules.pathWithoutOperations
     Rules.missingContentType
+    ExampleValidation.invalidExamples
 ]
 
 let lint (rules: LintRule list) (document: OpenApiDocument) : LintResult = {

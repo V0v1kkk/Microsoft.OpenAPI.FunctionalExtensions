@@ -1,0 +1,160 @@
+openapi: 3.0.3
+info:
+  title: Example Validation Test Spec
+  version: 1.0.0
+paths:
+  /pets:
+    get:
+      operationId: listPets
+      summary: List pets
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [available, pending, sold]
+          example: available
+        - name: limit
+          in: query
+          schema:
+            type: integer
+          example: "not-an-integer"
+      responses:
+        "200":
+          description: A list of pets
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Pet"
+              example:
+                - id: 1
+                  name: Fluffy
+                  status: available
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                required: [message]
+                additionalProperties: false
+              example:
+                message: Invalid input
+                extra: true
+    post:
+      operationId: createPet
+      summary: Create a pet
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Pet"
+            example:
+              id: 2
+              name: Rex
+              status: sold
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Pet"
+              examples:
+                created:
+                  value:
+                    id: 3
+                    name: Buddy
+                    status: available
+                wrongType:
+                  value:
+                    id: "not-integer"
+                    name: Buddy
+                    status: available
+  /items/{id}:
+    get:
+      operationId: getItem
+      summary: Get item
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          example: 42
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: string
+              example: 123
+components:
+  schemas:
+    Pet:
+      type: object
+      required: [id, name]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        status:
+          type: string
+          enum: [available, pending, sold]
+      example:
+        id: 1
+        name: Fluffy
+        status: available
+    StrictObject:
+      type: object
+      properties:
+        value:
+          type: string
+      required: [value]
+      additionalProperties: false
+      example:
+        value: ok
+    NullableString:
+      type: string
+      nullable: true
+      example: null
+    NonNullableString:
+      type: string
+      example: null
+    NestedObject:
+      type: object
+      properties:
+        inner:
+          type: object
+          properties:
+            count:
+              type: integer
+          required: [count]
+      required: [inner]
+      example:
+        inner:
+          count: 5
+    InvalidNested:
+      type: object
+      properties:
+        inner:
+          type: object
+          properties:
+            count:
+              type: integer
+          required: [count]
+      required: [inner]
+      example:
+        inner: {}
+    InvalidEnum:
+      type: string
+      enum: [red, green, blue]
+      example: purple

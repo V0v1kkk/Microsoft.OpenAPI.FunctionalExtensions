@@ -2,6 +2,7 @@ module Microsoft.OpenAPI.FunctionalExtensions.Tests.PropertyTests
 
 open System
 open System.Collections.Generic
+open System.Text.Json.Nodes
 open FsCheck
 open FsCheck.FSharp
 open NUnit.Framework
@@ -159,3 +160,81 @@ let ``referencePointer starts with component schema prefix`` (NonEmptyString id)
 let ``classifySchema is total for generated schemas`` (schema: IOpenApiSchema) =
     let _ = classifySchema schema
     true
+
+let private conformingExampleForSchemaType (schemaType: JsonSchemaType) : JsonNode =
+    if (schemaType &&& JsonSchemaType.Null) = JsonSchemaType.Null then
+        JsonNullSentinel.JsonNull
+    elif (schemaType &&& JsonSchemaType.String) = JsonSchemaType.String then
+        JsonValue.Create "example" :> JsonNode
+    elif (schemaType &&& JsonSchemaType.Integer) = JsonSchemaType.Integer then
+        JsonValue.Create 1 :> JsonNode
+    elif (schemaType &&& JsonSchemaType.Number) = JsonSchemaType.Number then
+        JsonValue.Create 1.5 :> JsonNode
+    elif (schemaType &&& JsonSchemaType.Boolean) = JsonSchemaType.Boolean then
+        JsonValue.Create true :> JsonNode
+    elif (schemaType &&& JsonSchemaType.Array) = JsonSchemaType.Array then
+        JsonNode.Parse("[]")
+    elif (schemaType &&& JsonSchemaType.Object) = JsonSchemaType.Object then
+        JsonNode.Parse("{}")
+    else
+        JsonValue.Create "fallback" :> JsonNode
+
+let private schemaWithSingleType (schemaType: JsonSchemaType) =
+    OpenApiSchema(Type = Nullable schemaType) :> IOpenApiSchema
+
+let private schemaWithNullableType (schemaType: JsonSchemaType) (nullable: bool) =
+    let combined =
+        if nullable then
+            schemaType ||| JsonSchemaType.Null
+        else
+            schemaType
+
+    OpenApiSchema(Type = Nullable combined) :> IOpenApiSchema
+
+let private singleFlagSchemaTypes =
+    [|
+        JsonSchemaType.String
+        JsonSchemaType.Integer
+        JsonSchemaType.Number
+        JsonSchemaType.Boolean
+        JsonSchemaType.Array
+        JsonSchemaType.Object
+    |]
+
+[<FsCheck.NUnit.Property>]
+let ``conforming examples produce no violations for schema type`` () =
+    singleFlagSchemaTypes
+    |> Array.forall (fun schemaType ->
+        let schema = schemaWithSingleType schemaType
+        let example = conformingExampleForSchemaType schemaType
+
+        Microsoft.OpenAPI.FunctionalExtensions.Linting.ExampleValidation.validateExample schema example "property-test"
+        |> List.isEmpty)
+
+[<FsCheck.NUnit.Property>]
+let ``null example violates iff schema is not nullable`` (nullable: bool) =
+    let schema = schemaWithNullableType JsonSchemaType.String nullable
+    let violations =
+        Microsoft.OpenAPI.FunctionalExtensions.Linting.ExampleValidation.validateExample
+            schema
+            JsonNullSentinel.JsonNull
+            "property-test"
+
+    if nullable then
+        List.isEmpty violations
+    else
+        not (List.isEmpty violations)
+
+[<FsCheck.NUnit.Property>]
+let ``string examples always pass string schemas`` (value: NonEmptyString) =
+    let schema = schemaWithSingleType JsonSchemaType.String
+    let example = JsonValue.Create value.Get :> JsonNode
+    Microsoft.OpenAPI.FunctionalExtensions.Linting.ExampleValidation.validateExample schema example "property-test"
+    |> List.isEmpty
+
+[<FsCheck.NUnit.Property>]
+let ``integer examples always fail against string-only schemas`` () =
+    let schema = schemaWithSingleType JsonSchemaType.String
+    let example = JsonValue.Create 42 :> JsonNode
+    Microsoft.OpenAPI.FunctionalExtensions.Linting.ExampleValidation.validateExample schema example "property-test"
+    |> List.isEmpty |> not
