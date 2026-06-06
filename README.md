@@ -2,7 +2,7 @@
 
 F# functional-first extensions for [Microsoft.OpenApi](https://github.com/microsoft/OpenAPI.NET) v3.x. Null-safe adapters, active patterns, schema graph traversal, route map extraction, spec merging, and subsetting.
 
-> **Pre-release:** packages are currently published at `0.2.0-alpha`. APIs may change before a stable `1.0` release.
+> **Pre-release:** packages are currently published at `0.9.0`. APIs may change before a stable `1.0` release.
 
 ## Features
 
@@ -29,13 +29,13 @@ F# functional-first extensions for [Microsoft.OpenApi](https://github.com/micros
 ### Installation
 
 ```bash
-dotnet add package Functional.Microsoft.OpenAPI.Extensions --version 0.2.0-alpha
+dotnet add package Functional.Microsoft.OpenAPI.Extensions --version 0.9.0
 ```
 
 Optional visualization package:
 
 ```bash
-dotnet add package Functional.Microsoft.OpenAPI.Extensions.Visualizing --version 0.2.0-alpha
+dotnet add package Functional.Microsoft.OpenAPI.Extensions.Visualizing --version 0.9.0
 ```
 
 ### Basic Usage
@@ -61,7 +61,7 @@ match readSpecification specPath with
 ### Installation
 
 ```bash
-dotnet tool install --global Functional.Microsoft.OpenAPI.Extensions.Tool --version 0.2.0-alpha
+dotnet tool install --global Functional.Microsoft.OpenAPI.Extensions.Tool --version 0.9.0
 ```
 
 After installation, the command is `openapi-fx`. You can also run from source without installing:

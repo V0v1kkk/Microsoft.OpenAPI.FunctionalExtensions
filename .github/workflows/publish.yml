@@ -29,7 +29,7 @@ jobs:
         id: version
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            VERSION=$(grep -oP '<Version>\K[^<]+' Microsoft.OpenAPI.FunctionalExtensions/Microsoft.OpenAPI.FunctionalExtensions.fsproj)
+            VERSION=$(grep -oP '<VersionPrefix>\K[^<]+' Directory.Build.props)
           else
             VERSION="${{ github.ref_name }}"
             VERSION="${VERSION#v}"
@@ -44,6 +44,8 @@ jobs:
           dotnet pack Microsoft.OpenAPI.FunctionalExtensions.Visualizing/Microsoft.OpenAPI.FunctionalExtensions.Visualizing.fsproj \
             -c Release --no-build /p:Version=${{ steps.version.outputs.version }} -o artifacts
           dotnet pack Microsoft.OpenAPI.FunctionalExtensions.Visualizing.Tool/Microsoft.OpenAPI.FunctionalExtensions.Visualizing.Tool.fsproj \
+            -c Release --no-build /p:Version=${{ steps.version.outputs.version }} -o artifacts
+          dotnet pack Microsoft.OpenAPI.FunctionalExtensions.Linting/Microsoft.OpenAPI.FunctionalExtensions.Linting.fsproj \
             -c Release --no-build /p:Version=${{ steps.version.outputs.version }} -o artifacts
 
       - name: Push to NuGet

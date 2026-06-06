@@ -4,6 +4,9 @@
         <TargetFramework>net10.0</TargetFramework>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
         <RootNamespace>Microsoft.OpenAPI.FunctionalExtensions.Linting</RootNamespace>
+        <PackageId>Functional.Microsoft.OpenAPI.Extensions.Linting</PackageId>
+        <Description>Configurable lint rules for OpenAPI specifications: operation IDs, descriptions, unused schemas, example validation, and more.</Description>
+        <PackageTags>openapi;fsharp;linting;validation;lint</PackageTags>
     </PropertyGroup>
 
     <ItemGroup>
