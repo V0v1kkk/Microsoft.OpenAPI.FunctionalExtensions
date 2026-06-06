@@ -1,0 +1,28 @@
+<Project>
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- F# runtime (pin above transitive versions from test packages) -->
+    <PackageVersion Include="FSharp.Core" Version="9.0.300" />
+
+    <!-- OpenAPI.NET -->
+    <PackageVersion Include="Microsoft.OpenApi" Version="3.6.0" />
+    <PackageVersion Include="Microsoft.OpenApi.YamlReader" Version="3.6.0" />
+
+    <!-- CLI -->
+    <PackageVersion Include="Argu" Version="6.2.5" />
+
+    <!-- Visualization -->
+    <PackageVersion Include="Rubjerg.Graphviz" Version="3.0.2" />
+
+    <!-- Testing -->
+    <PackageVersion Include="NUnit" Version="4.3.2" />
+    <PackageVersion Include="NUnit3TestAdapter" Version="4.5.0" />
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageVersion Include="FsCheck" Version="3.3.0" />
+    <PackageVersion Include="FsCheck.NUnit" Version="3.3.0" />
+    <PackageVersion Include="Verify.NUnit" Version="27.0.0" />
+  </ItemGroup>
+</Project>

@@ -8,4 +8,8 @@
     <PackageProjectUrl>https://github.com/user/Microsoft.OpenAPI.FunctionalExtensions</PackageProjectUrl>
     <RepositoryType>git</RepositoryType>
   </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="FSharp.Core" />
+  </ItemGroup>
 </Project>

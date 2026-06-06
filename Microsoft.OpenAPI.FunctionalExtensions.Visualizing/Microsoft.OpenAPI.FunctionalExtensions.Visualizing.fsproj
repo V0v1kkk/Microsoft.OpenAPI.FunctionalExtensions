@@ -16,7 +16,7 @@
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="Rubjerg.Graphviz" Version="3.0.2" />
+        <PackageReference Include="Rubjerg.Graphviz" />
     </ItemGroup>
 
     <ItemGroup>
