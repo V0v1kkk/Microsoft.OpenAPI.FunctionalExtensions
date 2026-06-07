@@ -5,7 +5,8 @@
     <Authors>Vladimir</Authors>
     <Copyright>Copyright (c) 2026 Vladimir Rogozhin</Copyright>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <PackageProjectUrl>https://github.com/user/Microsoft.OpenAPI.FunctionalExtensions</PackageProjectUrl>
+    <PackageProjectUrl>https://github.com/V0v1kkk/Microsoft.OpenAPI.FunctionalExtensions</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/V0v1kkk/Microsoft.OpenAPI.FunctionalExtensions</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
   </PropertyGroup>
 
